@@ -6,6 +6,7 @@ namespace Umino\Kodik;
 
 use CIBlockElement;
 use COption;
+use CUtil;
 
 Class Filling
 {
@@ -70,7 +71,8 @@ Class Filling
 
     protected function addVideo(array $item)
     {
-        $xml_id = md5($item['title']);
+        $title = $item['title'] . ' (' . $item['year'] . ')';
+        $xml_id = md5($title);
 
         $params = [
             'IBLOCK_SECTION_ID' => false,
@@ -87,7 +89,8 @@ Class Filling
                 'SHIKIMORI_ID' => $item['shikimori_id'],
                 'SCREENSHOTS' => $item['screenshots']
             ],
-            'NAME' => $item['title'],
+            'NAME' => $title,
+            'CODE' => Cutil::translit($title, 'ru', ['replace_space' => '-','replace_other' => '-']),
             'ACTIVE' => 'Y',
             'XML_ID' => $xml_id,
         ];
