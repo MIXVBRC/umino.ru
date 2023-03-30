@@ -126,8 +126,12 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    protected static function list(string $type, int $pageCount, int $limit = 100): array
+    protected static function list(string $type, int $count): array
     {
+        $count = $count <= 100 ? $count : (ceil($count / 100) * 100);
+        $pageCount = $count > 100 ? ceil($count / 100) : 1;
+        $limit = $count >= 100 ? 100 : $count;
+
         $request = self::request(__FUNCTION__, [
             'limit' => $limit,
             'types' => implode(',', self::$types[$type]),
@@ -139,7 +143,7 @@ class API
             $pageCount = (int) ceil($request['total'] / $limit);
         }
 
-        $result = $request['results'];
+        $result = $request;
 
         for ($page = 1; $page < $pageCount; $page++) {
 
@@ -154,7 +158,7 @@ class API
 
             if (empty($request)) break;
 
-            $result = array_merge($result, $request['results']);
+            $result['results'] = array_merge($result['results'], $request['results']);
 
         }
 
@@ -166,9 +170,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getFilmList(int $pageCount, int $limit = 100): array
+    public static function getFilmList(int $count): array
     {
-        return self::list('film', $pageCount, $limit);
+        return self::list('film', $count);
     }
 
     /**
@@ -176,9 +180,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getCartoonList(int $pageCount, int $limit = 100): array
+    public static function getCartoonList(int $count): array
     {
-        return self::list('cartoon', $pageCount, $limit);
+        return self::list('cartoon', $count);
     }
 
     /**
@@ -186,9 +190,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getAnimeList(int $pageCount, int $limit = 100): array
+    public static function getAnimeList(int $count): array
     {
-        return self::list('anime', $pageCount, $limit);
+        return self::list('anime', $count);
     }
 
     /**
@@ -196,9 +200,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getSerialList(int $pageCount, int $limit = 100): array
+    public static function getSerialList(int $count): array
     {
-        return self::list('serial', $pageCount, $limit);
+        return self::list('serial', $count);
     }
 
     /**
@@ -206,9 +210,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getCartoonSerialList(int $pageCount, int $limit = 100): array
+    public static function getCartoonSerialList(int $count): array
     {
-        return self::list('cartoon-serial', $pageCount, $limit);
+        return self::list('cartoon-serial', $count);
     }
 
     /**
@@ -216,9 +220,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getAnimeSerialList(int $pageCount, int $limit = 100): array
+    public static function getAnimeSerialList(int $count): array
     {
-        return self::list('anime-serial', $pageCount, $limit);
+        return self::list('anime-serial', $count);
     }
 
     /**

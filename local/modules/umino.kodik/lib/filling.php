@@ -7,6 +7,7 @@ namespace Umino\Kodik;
 use CIBlockElement;
 use COption;
 use CUtil;
+use Umino\Kodik\Parser\ParserShikimori;
 
 class Filling
 {
@@ -74,6 +75,8 @@ class Filling
         $title = $item['title'];
         $xml_id = md5($title);
 
+        if ($id = $this->videoList[$xml_id]) return $id;
+
         $params = [
             'IBLOCK_SECTION_ID' => false,
             'IBLOCK_ID' => $this->getIBlockVideo(),
@@ -87,37 +90,31 @@ class Filling
                 'IMDB_ID' => $item['imdb_id'],
                 'WORLDART_ID' => explode('id=',$item['worldart_link'])[1],
                 'SHIKIMORI_ID' => $item['shikimori_id'],
-                'SCREENSHOTS' => $item['screenshots']
             ],
             'NAME' => $title,
             'CODE' => Cutil::translit($title, 'ru', ['replace_space' => '-','replace_other' => '-']),
             'ACTIVE' => 'Y',
             'XML_ID' => $xml_id,
+            'DETAIL_TEXT_TYPE' => 'html',
         ];
 
+        $parser = null;
+
         if ($item['shikimori_id']) {
-
-            $result = $this->getShikimoriData($item['shikimori_id']);
-
-            if (empty($result)) {
-                $params['ACTIVE'] = 'N';
-            } else {
-                foreach ($result as $name => $value) {
-                    if (empty($value)) {
-                        $params['ACTIVE'] = 'N';
-                    } else {
-                        $params[$name] = $value;
-                    }
-                }
-            }
+            $parser = new ParserShikimori($item['shikimori_id']);
         }
 
-        if ($id = $this->videoList[$xml_id]) {
-            $this->element->Update($id, $params);
+        if (is_null($parser)) {
+            $params['ACTIVE'] = 'N';
         } else {
-            $id = $this->element->Add($params);
-            $this->videoList[$xml_id] = $id;
+            $params['PREVIEW_PICTURE'] = $parser->getImage();
+            $params['DETAIL_TEXT'] = $parser->getDescription();
         }
+
+        pre($params);
+
+        $id = $this->element->Add($params);
+        $this->videoList[$xml_id] = $id;
 
         return $id;
     }
@@ -125,6 +122,8 @@ class Filling
     protected function addTranslation(array $item)
     {
         $xml_id = md5($item['translation']['title'].$item['translation']['type']);
+
+        if ($id = $this->translationList[$xml_id]) return $id;
 
         $params = [
             'IBLOCK_SECTION_ID' => false,
@@ -138,12 +137,8 @@ class Filling
             'XML_ID' => $xml_id,
         ];
 
-        if ($id = $this->translationList[$xml_id]) {
-            $this->element->Update($id, $params);
-        } else {
-            $id = $this->element->Add($params);
-            $this->translationList[$xml_id] = $id;
-        }
+        $id = $this->element->Add($params);
+        $this->translationList[$xml_id] = $id;
 
         return $id;
     }
@@ -151,7 +146,7 @@ class Filling
     protected function addData(array $item, int $videoId, int $translationId)
     {
 
-        $xml_id = md5($videoId . $translationId . $item['last_season']);
+        $xml_id = md5($item['title'] . $item['translation']['title']);
 
         $params = [
             'IBLOCK_SECTION_ID' => false,
@@ -166,6 +161,7 @@ class Filling
                 'CREATED_AT' => $item['created_at'],
                 'UPDATED_AT' => $item['updated_at'],
                 'LINK' => $item['link'],
+                'SCREENSHOTS' => $item['screenshots'],
             ],
             'NAME' => $item['title'] . ' (' . $item['translation']['title'] . ')',
             'ACTIVE' => 'Y',
