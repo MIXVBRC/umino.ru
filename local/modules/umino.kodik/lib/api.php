@@ -5,6 +5,7 @@ namespace Umino\Kodik;
 
 
 use COption;
+use Umino\Kodik\Tables\ImportTable;
 
 class API
 {
@@ -52,16 +53,6 @@ class API
         ],
     ];
 
-    protected static function getToken(): string
-    {
-        return COption::GetOptionString("umino.kodik", "api_token");
-    }
-
-    protected static function getUrl(): string
-    {
-        return COption::GetOptionString("umino.kodik", "api_url");
-    }
-
     public static function getStages(): array
     {
         return self::$stages;
@@ -73,93 +64,89 @@ class API
     }
 
     /**
-     * @param string $page
-     * @param array $params
+     * @param string $url
      * @return array
      */
-    protected static function request(string $page, array $params): array
+    protected static function request(string $url): array
     {
-        $params = array_merge($params, ['token' => self::getToken()]);
-        $url = self::getUrl() . $page . '?' . http_build_query($params);
+        $xml_id = md5($url);
 
-        if ($curl = curl_init()) {
-
-            $headers = array(
-                'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.2924.87 Safari/537.36',
-                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-                'Connection: keep-alive',
-                'Cache-Control: max-age=0',
-                'Upgrade-Insecure-Requests: 1'
-            );
-            curl_setopt($curl, CURLOPT_URL, $url);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-            $out = curl_exec($curl);
-            $parse = json_decode($out, true);
-            curl_close($curl);
-
-        } else {
-
-            $out = file_get_contents($url);
-            $parse = json_decode($out, true);
-
+        if ($results = ImportTable::getByXmlId($xml_id, true)) {
+            return $results;
         }
 
-        return $parse ?: [];
+        $request = Request::getContent($url, true);
+
+        if (empty($request) || !empty($request['error'])) return [];
+
+        $request = array_change_key_case($request, CASE_UPPER);
+
+        $results = array_merge($request, [
+            'XML_ID' => $xml_id,
+            'URL' => $url,
+            'RESULTS_COUNT' => count($request['RESULTS']),
+        ]);
+
+        $id = ImportTable::add($results);
+
+        if (!$id->isSuccess()) return [];
+
+        return ImportTable::getByXmlId($xml_id, true)?:[];
     }
 
     /**
-     * @param string $stage - stage name [getStages()]
-     * @param int $id - id from stage
+     * @param array $params
      * @return array
      */
-    public static function search(array $filter): array
+    public static function search(array $params): array
     {
-        $filter['with_episodes'] = 'false';
-        return self::request(__FUNCTION__, $filter)['results']?:[];
+        $components = [
+            Core::getAPIUrl(),
+            __FUNCTION__
+        ];
+
+        $params = array_merge($params, [
+            'with_episodes' => 'false',
+            'token' => Core::getAPIToken(),
+        ]);
+
+        $url = Request::buildURL($components, $params);
+
+        return self::request($url);
     }
 
     /**
      * @param string $type - type (film/cartoon/anime/serial/cartoon-serial/anime-serial)
-     * @param int $pageCount - 0 is full pages
-     * @param int $limit - max 100, default: 100
+     * @param int $count - results count
      * @return array
      */
-    protected static function list(string $type, int $count): array
+    protected static function list(string $type, int $pageCount): array
     {
-        $count = $count <= 100 ? $count : (ceil($count / 100) * 100);
-        $pageCount = $count > 100 ? ceil($count / 100) : 1;
-        $limit = $count >= 100 ? 100 : $count;
+        $components = [
+            Core::getAPIUrl(),
+            __FUNCTION__
+        ];
 
-        $request = self::request(__FUNCTION__, [
-            'limit' => $limit,
+        $params = [
+            'token' => Core::getAPIToken(),
+            'limit' => Core::getAPILimit(),
             'types' => implode(',', self::$types[$type]),
-        ]);
+        ];
 
-        if (empty($request) || !empty($request['error'])) return $request;
+        $url = Request::buildURL($components, $params);
 
-        if ($pageCount <= 0) {
-            $pageCount = (int) ceil($request['total'] / $limit);
-        }
-
-        $result = $request;
+        $result = $request = self::request($url);
 
         for ($page = 1; $page < $pageCount; $page++) {
 
-            if (empty($nextPage = $request['next_page'])) break;
+            if (empty($request['NEXT_PAGE'])) break;
 
-            $params = self::getParams($nextPage);
-
-            $request = self::request(__FUNCTION__, [
-                'token' => self::getToken(),
-                'page' => $params['page'],
-            ]);
-
-            if (empty($request)) break;
-
-            $result['results'] = array_merge($result['results'], $request['results']);
-
+            $request = self::request($request['NEXT_PAGE']);
+            $result['RESULTS'] = array_merge($result['RESULTS'], $request['RESULTS']);
+            if (!is_array($result['TIME'])) {
+                $result['TIME'] = [$result['TIME']];
+            }
+            $result['TIME'] = array_merge($result['TIME'], $request['TIME']);
         }
 
         return $result?:[];
@@ -170,9 +157,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getFilmList(int $count): array
+    public static function getFilmList(int $pageCount): array
     {
-        return self::list('film', $count);
+        return self::list('film', $pageCount);
     }
 
     /**
@@ -180,9 +167,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getCartoonList(int $count): array
+    public static function getCartoonList(int $pageCount): array
     {
-        return self::list('cartoon', $count);
+        return self::list('cartoon', $pageCount);
     }
 
     /**
@@ -190,9 +177,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getAnimeList(int $count): array
+    public static function getAnimeList(int $pageCount): array
     {
-        return self::list('anime', $count);
+        return self::list('anime', $pageCount);
     }
 
     /**
@@ -200,9 +187,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getSerialList(int $count): array
+    public static function getSerialList(int $pageCount): array
     {
-        return self::list('serial', $count);
+        return self::list('serial', $pageCount);
     }
 
     /**
@@ -210,9 +197,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getCartoonSerialList(int $count): array
+    public static function getCartoonSerialList(int $pageCount): array
     {
-        return self::list('cartoon-serial', $count);
+        return self::list('cartoon-serial', $pageCount);
     }
 
     /**
@@ -220,9 +207,9 @@ class API
      * @param int $limit - max 100, default: 100
      * @return array
      */
-    public static function getAnimeSerialList(int $count): array
+    public static function getAnimeSerialList(int $pageCount): array
     {
-        return self::list('anime-serial', $count);
+        return self::list('anime-serial', $pageCount);
     }
 
     /**

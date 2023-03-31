@@ -49,6 +49,12 @@ $aTabs = [
                 'https://kodikapi.com/',
                 ['text', 32]
             ],
+            [
+                'api_limit',
+                Loc::getMessage('UMINO_KODIK_OPTIONS_API_LIMIT'),
+                100,
+                ['text', 5]
+            ],
         ]
     ],
 
@@ -58,26 +64,8 @@ $aTabs = [
         'TITLE'   => Loc::getMessage('UMINO_KODIK_OPTIONS_TAB_FILLING'),
         'OPTIONS' => [
             [
-                'iblock_video_id',
-                Loc::getMessage('UMINO_KODIK_OPTIONS_IBLOCK_VIDEO_ID'),
-                '0',
-                [
-                    'selectbox',
-                    $iblockList
-                ]
-            ],
-            [
-                'iblock_translation_id',
-                Loc::getMessage('UMINO_KODIK_OPTIONS_IBLOCK_TRANSLATION_ID'),
-                '0',
-                [
-                    'selectbox',
-                    $iblockList
-                ]
-            ],
-            [
-                'iblock_data_id',
-                Loc::getMessage('UMINO_KODIK_OPTIONS_IBLOCK_DATA_ID'),
+                'iblock_elements_id',
+                Loc::getMessage('UMINO_KODIK_OPTIONS_IBLOCK_ELEMENTS'),
                 '0',
                 [
                     'selectbox',
@@ -127,14 +115,12 @@ if ($request->isPost() && check_bitrix_sessid()) {
             }
             if ($request['apply']) { // сохраняем введенные настройки
                 $optionValue = $request->getPost($arOption[0]);
-                if ($arOption[0] == 'switch_on') {
-                    if ($optionValue == '') {
-                        $optionValue = 'N';
-                    }
-                }
-                if ($arOption[0] == 'jquery_on') {
-                    if ($optionValue == '') {
-                        $optionValue = 'N';
+                if ($arOption[0] == 'api_limit') {
+                    $optionValue = (int) $optionValue;
+                    if (empty($optionValue) || $optionValue > 100) {
+                        $optionValue = 100;
+                    } elseif ($optionValue < 1) {
+                        $optionValue = 1;
                     }
                 }
                 Option::set($module_id, $arOption[0], is_array($optionValue) ? implode(',', $optionValue) : $optionValue);

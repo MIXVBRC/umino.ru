@@ -6,19 +6,20 @@ namespace Umino\Kodik\Parser;
 
 use CFile;
 use phpQuery;
+use Umino\Kodik\Request;
 
 class ParserShikimori extends Parser implements ParserInterface
 {
-    protected $url = 'https://shikimori.one/animes/';
+    public static $url = 'https://shikimori.one/animes/';
 
-    public function __construct($id)
+    public function __construct($url)
     {
-        parent::__construct($id);
+        parent::__construct($url);
 
         $error = $this->phpQuery->find('p.error-404')->text();
         if ($error && $error == 302) {
-            if ($this->url = $this->phpQuery->find('p a')->attr('href')) {
-                if (empty($page = self::getPageContent($this->url))) return null;
+            if ($url = $this->phpQuery->find('p a')->attr('href')) {
+                if (empty($page = Request::getContent($url))) return null;
                 $this->phpQuery = phpQuery::newDocument($page);
             }
         }

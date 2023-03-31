@@ -3,28 +3,8 @@
 
 namespace Umino\Kodik\Tables;
 
+use Bitrix\Iblock\ElementTable;
 use Bitrix\Main;
-
-/* MySQL
-TODO: CREATE TABLE IF NOT EXISTS `umino_kodik_info` (
-    ID INT PRIMARY KEY AUTO_INCREMENT,
-    XML_ID VARCHAR(255) NOT NULL,
-    ACTIVE BOOLEAN DEFAULT 1,
-    DATE_CREATE DATETIME DEFAULT CURRENT_TIMESTAMP,
-    DATE_UPDATE DATETIME DEFAULT CURRENT_TIMESTAMP,
-    TYPE VARCHAR(255),
-    TITLE VARCHAR(255) NOT NULL,
-    TITLE_ORIGINAL VARCHAR(255),
-    TITLE_OTHER VARCHAR(255),
-    YEAR VARCHAR(255),
-    IMAGE VARCHAR(255),
-    DESCRIPTION TEXT,
-    KODIK_ID VARCHAR(255),
-    SHIKIMORI_ID VARCHAR(255),
-    WORLDART_ID VARCHAR(255),
-    KINOPOISK_ID VARCHAR(255),
-    IMDB_ID VARCHAR(255));
-*/
 
 /**
  * Class InfoTable
@@ -41,13 +21,13 @@ TODO: CREATE TABLE IF NOT EXISTS `umino_kodik_info` (
  * <li> TITLE_ORIGINAL string
  * <li> TITLE_OTHER array
  * <li> YEAR string
- * <li> IMAGE string
- * <li> DESCRIPTION string
  * <li> KODIK_ID string
  * <li> SHIKIMORI_ID string
  * <li> WORLDART_ID string
  * <li> KINOPOISK_ID string
  * <li> IMDB_ID string
+ * <li> IBLOCK_ELEMENT_ID int
+ * <li> IBLOCK_ELEMENT array
  * </ul>
  *
  * @package Umino\Kodik\Tables
@@ -99,15 +79,25 @@ class InfoTable extends Main\Entity\DataManager
                 'required' => true,
             ]),
             new Main\Entity\StringField('TITLE_ORIGINAL'),
-            new Main\Entity\StringField('TITLE_OTHER'),
+            new Main\Entity\TextField('TITLE_OTHER', [
+                'serialized' => true,
+            ]),
             new Main\Entity\StringField('YEAR'),
-            new Main\Entity\StringField('IMAGE'),
-            new Main\Entity\TextField('DESCRIPTION'),
+
             new Main\Entity\StringField('KODIK_ID'),
             new Main\Entity\StringField('SHIKIMORI_ID'),
-            new Main\Entity\StringField('WORLDART_ID'),
+            new Main\Entity\StringField('WORLDART_LINK'),
             new Main\Entity\StringField('KINOPOISK_ID'),
             new Main\Entity\StringField('IMDB_ID'),
+
+            new Main\Entity\IntegerField('IBLOCK_ELEMENT_ID'),
+
+            new Main\Entity\ReferenceField(
+                'IBLOCK_ELEMENT',
+                ElementTable::class,
+                ['=this.IBLOCK_ELEMENT_ID' => 'ref.ID'],
+                ['join_type' => 'LEFT']
+            ),
         ];
     }
 }

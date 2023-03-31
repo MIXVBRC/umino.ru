@@ -6,13 +6,17 @@ namespace Umino\Kodik\Parser;
 
 use CFile;
 use phpQuery;
+use Umino\Kodik\Request;
 
 class ParserWorldArt extends Parser implements ParserInterface
 {
-    protected $url = 'http://world-art.ru/animation/animation.php?id=';
-
     protected $urlDescription = 'http://world-art.ru/animation/animation_update_synopsis.php?id=';
     protected $phpQueryDescription;
+
+    public function __construct($url)
+    {
+        parent::__construct($url);
+    }
 
     public function getImage()
     {
@@ -23,7 +27,7 @@ class ParserWorldArt extends Parser implements ParserInterface
     public function getDescription()
     {
         $this->urlDescription .= $this->id;
-        $this->phpQueryDescription = phpQuery::newDocument(self::getPageContent($this->urlDescription));
+        $this->phpQueryDescription = phpQuery::newDocument(Request::getContent($this->urlDescription));
 
         $result = '';
 

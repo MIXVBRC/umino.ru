@@ -5,169 +5,187 @@ namespace Umino\Kodik;
 
 
 use Bitrix\Iblock\ElementTable;
+use Bitrix\Main\Type\DateTime;
 use CIBlockElement;
 use CModule;
-use COption;
 use CUtil;
 use Umino\Kodik\Parser\ParserShikimori;
 use Umino\Kodik\Parser\ParserWorldArt;
+use Umino\Kodik\Tables\DataTable;
+use Umino\Kodik\Tables\ImportResultsTable;
+use Umino\Kodik\Tables\InfoTable;
+use Umino\Kodik\Tables\TranslationTable;
 
 class Import
 {
-    protected $iblockVideo;
-    protected $iblockTranslation;
-    protected $iblockData;
-
-    protected $element;
-
-    protected static $stages = [
-        ParserShikimori::class => 'SHIKIMORI_ID',
-        ParserWorldArt::class => 'WORLDART_ID',
-    ];
-
-    public function __construct()
+    public static function start(int $count = 0)
     {
         CModule::IncludeModule('iblock');
 
-        $this->iblockVideo = $this->getIBlockVideo();
-        $this->iblockTranslation = $this->getIBlockTranslation();
-        $this->iblockData = $this->getIBlockData();
+        $element = new CIBlockElement;
 
-        $this->element = new CIBlockElement;
+        if ($count <= 0) {
+            $count = ImportResultsTable::getCount();
+        }
+
+        $limit = Core::getAPILimit();
+
+        $pageCount = ceil($count / $limit);
+
+        for ($page = 0; $page < $pageCount; $page++) {
+
+            $itemList = ImportResultsTable::getList([
+                'limit' => $limit,
+                'offset' => $page * $limit,
+            ])->fetchAll();
+
+            foreach ($itemList as $item) {
+
+                $elementId = self::addElement($item['RESULTS'], $element);
+
+                if (!$elementId) continue;
+
+                $videoId = self::addVideo($item['RESULTS'], $elementId);
+
+                $translationId = self::addTranslation($item['RESULTS']);
+
+                self::addData($item['RESULTS'], $videoId, $translationId);
+            }
+        }
+
+        self::loadImages();
     }
 
-    protected function getIBlockVideo(): int
+    protected static function addElement(array $item, CIBlockElement $element): int
     {
-        return COption::GetOptionString("umino.kodik", "iblock_video_id");
-    }
+        $xml_id = md5($item['TITLE']);
 
-    protected function getIBlockTranslation(): int
-    {
-        return COption::GetOptionString("umino.kodik", "iblock_translation_id");
-    }
-
-    protected function getIBlockData(): int
-    {
-        return COption::GetOptionString("umino.kodik", "iblock_data_id");
-    }
-
-    protected function getByXmlId(int $iblockId, string $xmlId)
-    {
-        return ElementTable::getList([
+        $id = ElementTable::getList([
             'filter' => [
-                'IBLOCK_ID' => $iblockId,
-                'XML_ID' => $xmlId,
+                'IBLOCK_ID' => Core::getIBlock(),
+                'XML_ID' => $xml_id,
             ],
             'select' => ['ID'],
             'limit' => 1,
         ])->fetch()['ID'];
-    }
 
-    public function start(array $itemList)
-    {
-        foreach ($itemList as $item) {
+        if ($id) return $id;
 
-            $videoId = $this->addVideo($item);
-
-            $translationId = $this->addTranslation($item);
-
-            $this->addData($item, $videoId, $translationId);
-        }
-    }
-
-    protected function addVideo(array $item)
-    {
-        $title = $item['title'];
-        $xml_id = md5($title);
-
-        if ($id = $this->getByXmlId($this->iblockVideo, $xml_id)) return $id;
-
-        $params = [
+        $fields = [
             'IBLOCK_SECTION_ID' => false,
-            'IBLOCK_ID' => $this->getIBlockVideo(),
-            'PROPERTY_VALUES'=> [
-                'KODIK_ID' => $item['id'],
-                'YEAR' => $item['year'],
-                'KINOPOISK_ID' => $item['kinopoisk_id'],
-                'TITLE_ORIGINAL' => $item['title_orig'],
-                'TITLE_OTHER' => explode('/', str_replace(' / ', '/', $item['other_title'])),
-                'TYPE' => $item['type'],
-                'IMDB_ID' => $item['imdb_id'],
-                'WORLDART_ID' => explode('id=',$item['worldart_link'])[1],
-                'SHIKIMORI_ID' => $item['shikimori_id'],
-            ],
-            'NAME' => $title,
-            'CODE' => Cutil::translit($title, 'ru', ['replace_space' => '-','replace_other' => '-']),
-            'ACTIVE' => 'Y',
+            'IBLOCK_ID' => Core::getIBlock(),
+            'NAME' => $item['TITLE'],
+            'CODE' => Cutil::translit($item['TITLE'], 'ru', ['replace_space' => '-','replace_other' => '-']),
             'XML_ID' => $xml_id,
+            'ACTIVE' => 'N',
             'DETAIL_TEXT_TYPE' => 'html',
         ];
 
-        $stageIds = [];
-        foreach (self::$stages as $stage => $fieldName) {
-            $stageIds[$stage] = $params['PROPERTY_VALUES'][$fieldName];
-        }
-
-        if ($stageIds && $parseData = $this->parseData($stageIds)) {
-            $params = array_merge($params, $parseData);
-        }
-
-        return $this->element->Add($params);
+        return $element->Add($fields);
     }
 
-    protected function addTranslation(array $item)
+    protected static function addVideo(array $item, int $elementId): int
     {
-        $xml_id = md5($item['translation']['title'].$item['translation']['type']);
+        $xml_id = md5($item['TITLE']);
 
-        if ($id = $this->getByXmlId($this->iblockTranslation, $xml_id)) return $id;
+        $id = InfoTable::getList([
+            'filter' => ['XML_ID'=>$xml_id],
+            'select' => ['ID'],
+            'limit' => 1,
+        ])->fetch()['ID'];
 
-        $params = [
-            'IBLOCK_SECTION_ID' => false,
-            'IBLOCK_ID' => $this->getIBlockTranslation(),
-            'PROPERTY_VALUES'=> [
-                'KODIK_ID' => $item['translation']['id'],
-                'TYPE' => $item['translation']['type'],
-            ],
-            'NAME' => $item['translation']['title'],
-            'ACTIVE' => 'Y',
+        if ($id)  {
+            InfoTable::update($id, [
+                'IBLOCK_ELEMENT_ID' => $elementId,
+            ]);
+            return $id;
+        }
+
+        $fields = [
             'XML_ID' => $xml_id,
+            'TYPE' => $item['TYPE'],
+            'TITLE' => $item['TYPE'],
+            'TITLE_ORIGINAL' => $item['TITLE_ORIG'],
+            'TITLE_OTHER' => explode('/', str_replace(' / ', '/', $item['OTHER_TITLE'])),
+            'YEAR' => $item['YEAR'],
+            'KODIK_ID' => $item['ID'],
+            'SHIKIMORI_ID' => $item['SHIKIMORI_ID']?:'',
+            'WORLDART_LINK' => $item['WORLDART_LINK']?:'',
+            'KINOPOISK_ID' => $item['KINOPOISK_ID']?:'',
+            'IMDB_ID' => $item['IMDB_ID']?:'',
+            'IBLOCK_ELEMENT_ID' => $elementId,
         ];
 
-        return $this->element->Add($params);
+        $id = InfoTable::add($fields);
+
+        return $id->getId();
     }
 
-    protected function addData(array $item, int $videoId, int $translationId)
+    protected static function addTranslation(array $item)
     {
-        $xml_id = md5($item['title'] . $item['translation']['title']);
+        $xml_id = md5($item['TRANSLATION']['TITLE'].$item['TRANSLATION']['TYPE']);
 
-        $params = [
-            'IBLOCK_SECTION_ID' => false,
-            'IBLOCK_ID' => $this->getIBlockData(),
-            'PROPERTY_VALUES'=> [
-                'VIDEO_CONTENT' => $videoId,
-                'TRANSLATION' => $translationId,
-                'LAST_SEASON' => $item['last_season'],
-                'LAST_EPISODE' => $item['last_episode'],
-                'EPISODES_COUNT' => $item['episodes_count'],
-                'QUALITY' => $item['quality'],
-                'CREATED_AT' => $item['created_at'],
-                'UPDATED_AT' => $item['updated_at'],
-                'LINK' => $item['link'],
-                'SCREENSHOTS' => $item['screenshots'],
-            ],
-            'NAME' => $item['title'] . ' (' . $item['translation']['title'] . ')',
-            'ACTIVE' => 'Y',
+        $id = TranslationTable::getList([
+            'filter' => ['XML_ID'=>$xml_id],
+            'select' => ['ID'],
+            'limit' => 1,
+        ])->fetch()['ID'];
+
+        if ($id) return $id;
+
+        $fields = [
             'XML_ID' => $xml_id,
+            'TITLE' => $item['TRANSLATION']['title'],
+            'KODIK_ID' => $item['TRANSLATION']['id'],
+            'TYPE' => $item['TRANSLATION']['type'],
         ];
 
-        if ($id = $this->getByXmlId($this->iblockData, $xml_id)) {
-            $this->element->Update($id, $params);
+        $id = TranslationTable::add($fields);
+
+        return $id->getId();
+    }
+
+    protected static function addData(array $item, int $videoId, int $translationId)
+    {
+        $xml_id = md5($item['TITLE'] . $item['TRANSLATION']['TITLE']);
+
+        $fields = [
+            'XML_ID' => $xml_id,
+            'TITLE' => $item['TITLE'] . ' (' . $item['TRANSLATION']['TITLE'] . ')',
+            'INFO_ID' => $videoId,
+            'TRANSLATION_ID' => $translationId,
+            'SEASON' => $item['LAST_SEASON'],
+            'EPISODES' => $item['LAST_EPISODE'],
+            'EPISODES_ALL' => $item['EPISODES_COUNT'],
+            'QUALITY' => $item['QUALITY'],
+            'KODIK_DATE_CREATE' => DateTime::createFromTimestamp(strtotime($item['CREATED_AT'])),
+            'KODIK_DATE_UPDATE' => DateTime::createFromTimestamp(strtotime($item['UPDATED_AT'])),
+            'LINK' => $item['LINK'],
+            'SCREENSHOTS' => $item['SCREENSHOTS'],
+        ];
+
+        $id = DataTable::getList([
+            'filter' => ['XML_ID'=>$xml_id],
+            'select' => ['ID'],
+            'limit' => 1,
+        ])->fetch()['ID'];
+
+        if ($id) {
+            DataTable::update($id, $fields);
         } else {
-            $this->element->Add($params);
+            DataTable::add($fields);
         }
     }
 
-    protected function parseData(array $stageIds): array
+    public static function getParseStages(): array
+    {
+        return [
+            ParserShikimori::class => 'SHIKIMORI_ID',
+//            ParserWorldArt::class => 'WORLDART_LINK',
+        ];
+    }
+
+    protected static function parseData(array $stageIds): array
     {
         $fields = [
             'PREVIEW_PICTURE' => 'getImage',
@@ -182,7 +200,7 @@ class Import
 
             switch ($stage) {
                 case ParserShikimori::class:
-                    $parser = new ParserShikimori($id);
+                    $parser = new ParserShikimori(ParserShikimori::$url.$id);
                     break;
                 case ParserWorldArt::class:
                     $parser = new ParserWorldArt($id);
@@ -202,54 +220,58 @@ class Import
             }
         }
 
-        if (!empty($fields)) {
-            $params['ACTIVE'] = 'N';
-        }
-
         return $params;
     }
 
-    public function loadImages(array $ids)
+    public static function loadImages(array $ids = [])
     {
-        $properties = [
-            'filter' => [
-                'IBLOCK_CODE' => 'video_content',
-                'ID' => $ids,
-            ],
-            'fields' => ['ID'],
-            'properties' => [
+        $element = new CIBlockElement();
+
+        if ($ids) {
+            $filter = ['IBLOCK_ELEMENT_ID' => $ids];
+        } else {
+            $filter = [
+                [
+                    'LOGIC' => 'OR',
+                    ['IBLOCK_ELEMENT_PREVIEW_PICTURE' => false],
+                    ['IBLOCK_ELEMENT_DETAIL_TEXT' => false],
+                ]
+            ];
+        }
+
+        $itemList = InfoTable::getList([
+            'filter' => $filter,
+            'select' => [
                 'SHIKIMORI_ID',
-                'WORLDART_ID',
-            ],
-            'select' => [],
-        ];
-        $properties['select'] = $properties['fields'];
-        foreach ($properties['properties'] as $property) {
-            $properties['select'][] = 'PROPERTY_'.$property;
-        }
+                'WORLDART_LINK',
+                'IBLOCK_ELEMENT_ID',
+                'IBLOCK_ELEMENT_PREVIEW_PICTURE' => 'IBLOCK_ELEMENT.PREVIEW_PICTURE',
+                'IBLOCK_ELEMENT_DETAIL_TEXT' => 'IBLOCK_ELEMENT.DETAIL_TEXT',
+            ]
+        ])->fetchAll();
 
-        $dbResult = CIBlockElement::GetList([],$properties['filter'],false,false,$properties['select']);
-
-        $itemList = [];
-        while ($item = $dbResult->GetNext()) {
-            foreach ($properties['fields'] as $field) {
-                $itemList[$item['ID']][$field] = $item[$field];
-            }
-            foreach ($properties['properties'] as $property) {
-                $itemList[$item['ID']][$property] = $item['PROPERTY_'.$property.'_VALUE'];
-            }
-        }
-
-        foreach ($itemList as $id => $item) {
+        foreach ($itemList as $item) {
 
             $stageIds = [];
-            foreach (self::$stages as $stage => $fieldName) {
+            foreach (self::getParseStages() as $stage => $fieldName) {
                 $stageIds[$stage] = $item[$fieldName];
             }
 
-            if ($stageIds && $params = $this->parseData($stageIds)) {
-                $this->element->Update($id, $params);
+            if ($stageIds && $params = self::parseData($stageIds)) {
+                $element->Update($item['IBLOCK_ELEMENT_ID'], $params);
             }
+        }
+
+        $itemList = ElementTable::getList([
+            'filter' => [
+                'ACTIVE' => 'N',
+                '!PREVIEW_PICTURE' => false,
+            ],
+            'select' => ['ID'],
+        ])->fetchAll();
+
+        foreach ($itemList as $item) {
+            $element->Update($item['ID'], ['ACTIVE' => 'Y']);
         }
     }
 }

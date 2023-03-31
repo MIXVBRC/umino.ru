@@ -8,7 +8,6 @@ $MESS['UMINO_KODIK_OPTIONS_INPUT_DEFAULT']  = 'Установить по умо�
 
 $MESS['UMINO_KODIK_OPTIONS_API_TOKEN']  = 'Kodik API токен';
 $MESS['UMINO_KODIK_OPTIONS_API_URL']  = 'Kodik API ссылка';
+$MESS['UMINO_KODIK_OPTIONS_API_LIMIT']  = 'Количество результатов в запросе';
 
-$MESS['UMINO_KODIK_OPTIONS_IBLOCK_VIDEO_ID']  = 'Инфоблок основной';
-$MESS['UMINO_KODIK_OPTIONS_IBLOCK_TRANSLATION_ID']  = 'Инфоблок студий переводов';
-$MESS['UMINO_KODIK_OPTIONS_IBLOCK_DATA_ID']  = 'Исфоблок основных данных';
+$MESS['UMINO_KODIK_OPTIONS_IBLOCK_ELEMENTS']  = 'Инфоблок для вывода';

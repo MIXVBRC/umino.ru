@@ -5,26 +5,6 @@ namespace Umino\Kodik\Tables;
 
 use Bitrix\Main;
 
-/* MySQL
-TODO: CREATE TABLE IF NOT EXISTS `umino_kodik_data` (
-    ID INT PRIMARY KEY AUTO_INCREMENT,
-    XML_ID VARCHAR(255) NOT NULL,
-    ACTIVE BOOLEAN DEFAULT 1,
-    DATE_CREATE DATETIME DEFAULT CURRENT_TIMESTAMP,
-    DATE_UPDATE DATETIME DEFAULT CURRENT_TIMESTAMP,
-    TITLE VARCHAR(255) NOT NULL,
-    INFO_ID INT NOT NULL,
-    TRANSLATION_ID INT NOT NULL,
-    SEASON INT NOT NULL,
-    EPISODES INT NOT NULL,
-    EPISODES_ALL INT NOT NULL,
-    QUALITY VARCHAR(255),
-    KODIK_DATE_CREATE DATETIME NOT NULL,
-    KODIK_DATE_UPDATE DATETIME NOT NULL,
-    LINK VARCHAR(255),
-    SCREENSHOTS VARCHAR(255));
-*/
-
 /**
  * Class DataTable
  *
@@ -119,7 +99,22 @@ class DataTable extends Main\Entity\DataManager
             ]),
 
             new Main\Entity\StringField('LINK'),
-            new Main\Entity\StringField('SCREENSHOTS'),
+            new Main\Entity\TextField('SCREENSHOTS', [
+                'serialized' => true,
+            ]),
+
+            new Main\Entity\ReferenceField(
+                'INFO',
+                InfoTable::class,
+                ['=this.INFO_ID' => 'ref.ID'],
+                ['join_type' => 'INNER']
+            ),
+            new Main\Entity\ReferenceField(
+                'TRANSLATION',
+                TranslationTable::class,
+                ['=this.TRANSLATION_ID' => 'ref.ID'],
+                ['join_type' => 'INNER']
+            ),
         ];
     }
 }

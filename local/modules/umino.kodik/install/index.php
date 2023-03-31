@@ -34,12 +34,26 @@ Class umino_kodik extends CModule
 
     function InstallDB($install_wizard = true)
     {
+        \Umino\Kodik\Tables\ImportTable::getEntity()->createDbTable();
+        \Umino\Kodik\Tables\ImportResultsTable::getEntity()->createDbTable();
+        \Umino\Kodik\Tables\InfoTable::getEntity()->createDbTable();
+        \Umino\Kodik\Tables\TranslationTable::getEntity()->createDbTable();
+        \Umino\Kodik\Tables\DataTable::getEntity()->createDbTable();
+
         RegisterModule($this->MODULE_ID);
         return true;
     }
 
     function UnInstallDB($arParams = Array())
     {
+        $connection = \Bitrix\Main\Application::getConnection();
+
+        $connection->dropTable(\Umino\Kodik\Tables\ImportTable::getTableName());
+        $connection->dropTable(\Umino\Kodik\Tables\ImportResultsTable::getTableName());
+        $connection->dropTable(\Umino\Kodik\Tables\InfoTable::getTableName());
+        $connection->dropTable(\Umino\Kodik\Tables\TranslationTable::getTableName());
+        $connection->dropTable(\Umino\Kodik\Tables\DataTable::getTableName());
+
         UnRegisterModule($this->MODULE_ID);
         return true;
     }
