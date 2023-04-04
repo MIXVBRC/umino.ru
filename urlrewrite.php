@@ -16,7 +16,7 @@ $arUrlRewrite=array (
     'PATH' => '/products/index.php',
     'SORT' => 100,
   ),
-  3 => 
+  5 => 
   array (
     'CONDITION' => '#^/anime/#',
     'RULE' => '',

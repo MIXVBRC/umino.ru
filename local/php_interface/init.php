@@ -4,4 +4,4 @@ if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/local/php_interface/include/functi
     require $_SERVER['DOCUMENT_ROOT'] . '/local/php_interface/include/functions.php';
 }
 
-CModule::IncludeModule('umino.kodik');
+CModule::IncludeModule('umino.anime');
