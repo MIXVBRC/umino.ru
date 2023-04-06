@@ -2,7 +2,6 @@
 
 use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
-use Umino\Anime\Tables;
 
 Loc::loadMessages(__FILE__);
 

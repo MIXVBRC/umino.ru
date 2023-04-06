@@ -87,7 +87,7 @@ create table if not exists umino_anime_result (
    primary key (ID));
 
 create table if not exists umino_anime_log (
-  ID int(18) not null,
+  ID int(18) not null auto_increment,
   DATE_CREATE datetime not null default current_timestamp,
   FILE varchar(255) not null,
   LINE varchar(255) not null,

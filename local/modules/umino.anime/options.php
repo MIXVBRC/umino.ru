@@ -6,6 +6,8 @@ use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\HttpApplication;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
+use Umino\Anime\Core;
+use Umino\Anime\Tables\LogTable;
 
 Loc::loadMessages(__FILE__);
 
@@ -33,7 +35,7 @@ ksort($iblockList);
 $aTabs = [
 
     [ // Основные настройки
-        'DIV'     => 'edit1',
+        'DIV'     => 'api',
         'TAB'     => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_GENERAL'),
         'TITLE'   => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_GENERAL'),
         'OPTIONS' => [
@@ -59,7 +61,7 @@ $aTabs = [
     ],
 
     [ // Настройки заполнения
-        'DIV'     => 'edit2',
+        'DIV'     => 'filling',
         'TAB'     => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_FILLING'),
         'TITLE'   => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_FILLING'),
         'OPTIONS' => [
@@ -82,7 +84,7 @@ $aTabs = [
     ],
 
     [ // Логи
-        'DIV'     => 'edit3',
+        'DIV'     => 'logs',
         'TAB'     => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_LOGS'),
         'TITLE'   => Loc::getMessage('UMINO_ANIME_OPTIONS_TAB_LOGS'),
         'OPTIONS' => [
@@ -113,15 +115,70 @@ $tabControl->begin();
                 __AdmSettingsDrawList($module_id, $aTab['OPTIONS']);
             }
 
-            if ($aTab['DIV'] === 'edit3'):?>
+            /*if ($aTab['DIV'] === 'logs') {
+                $logs = LogTable::getList([
+                    'limit' => Core::getLogsShowCount(),
+                    'order' => ['DATE_CREATE' => 'DESC'],
+                    'select' => [
+                        'DATE_CREATE',
+                        'FILE',
+                        'LINE',
+                        'MESSAGE',
+                    ],
+                ])->fetchAll();
 
-                <?
-//                    \Umino\Anime\Tables\LogTable::getList([
-//                            'order' => []
-//                    ])
-                ?>
+                if ($logs) {
 
-            <?endif;
+                    echo '<table class="umino_log">';
+                    echo '<thead>';
+                    echo '<tr>';
+                    echo '<td>Дата создания</td>';
+                    echo '<td>Файл</td>';
+                    echo '<td>Строка</td>';
+                    echo '<td>Данные</td>';
+                    echo '</tr>';
+                    echo '</thead>';
+
+                    echo '<tbody>';
+
+                    foreach ($logs as $log) {
+                        echo '<tr>';
+                        foreach ($log as $value) {
+                            echo '<td>';
+                            if (is_array($value)) {
+                                echo '<pre style="text-align:left;max-height:150px;overflow:overlay;">';
+                                print_r($value);
+                                echo '</pre>';
+                            } else {
+                                echo $value;
+                            }
+                            echo '</td>';
+                        }
+                        echo '</tr>';
+                    }
+                    echo '</tbody>';
+                    echo '<style>
+                        .umino_log {
+                            padding: 15px;
+                            background-color: #fff;
+                            border: 1px solid #dce7ed;
+                            width: 100%;
+                        }
+                        .umino_log thead {
+                            background-color: #dedede;
+                        }
+                        .umino_log td {
+                            text-align: center;
+                            padding:10px;
+                        }
+                        .umino_log tbody td {
+                            border: 1px solid #dedede;
+                        }
+                    </style>';
+                    echo '</table>';
+                    echo '</div>';
+                }
+            }*/
         }
         $tabControl->buttons();
         ?>

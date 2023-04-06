@@ -56,6 +56,7 @@ class LogTable extends Main\Entity\DataManager
                 'required' => true,
             ]),
             new Main\Entity\TextField('MESSAGE', [
+                'serialized' => true,
                 'required' => true,
             ]),
         ];

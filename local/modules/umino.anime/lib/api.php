@@ -99,10 +99,12 @@ class API
 
         $kodikRequestAdd = KodikRequestTable::add($fields);
 
-        Logger::log([
-            'message' => $kodikRequestAdd->getErrorMessages(),
-            'fields' => $fields,
-        ]);
+        if (!$kodikRequestAdd->isSuccess()) {
+            Logger::log([
+                'message' => $kodikRequestAdd->getErrorMessages(),
+                'fields' => $fields,
+            ]);
+        }
 
         unset($fields);
 
@@ -138,17 +140,21 @@ class API
             if ($kodikResultIds && $kodikResultIds[$fields['KODIK_ID']]) {
                 unset($fields['REQUEST_ID']);
                 $update = KodikResultTable::update($kodikResultIds[$fields['KODIK_ID']], $fields);
-                Logger::log([
-                    'message' => $update->getErrorMessages(),
-                    'id' => $kodikResultIds[$fields['KODIK_ID']],
-                    'fields' => $fields,
-                ]);
+                if (!$update->isSuccess()) {
+                    Logger::log([
+                        'message' => $update->getErrorMessages(),
+                        'id' => $kodikResultIds[$fields['KODIK_ID']],
+                        'fields' => $fields,
+                    ]);
+                }
             } else {
                 $add = KodikResultTable::add($fields);
-                Logger::log([
-                    'message' => $add->getErrorMessages(),
-                    'fields' => $fields,
-                ]);
+                if (!$add->isSuccess()) {
+                    Logger::log([
+                        'message' => $add->getErrorMessages(),
+                        'fields' => $fields,
+                    ]);
+                }
             }
 
         }

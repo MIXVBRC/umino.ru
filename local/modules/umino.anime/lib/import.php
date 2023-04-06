@@ -53,10 +53,12 @@ class Import
 
             $result = KodikResultTable::update($kodikResult['ID'], $fields);
 
-            Logger::log([
-                'message' => $result->getErrorMessages(),
-                'fields' => array_merge(['ID' => $kodikResult['ID']], $fields)
-            ]);
+            if (!$result->isSuccess()) {
+                Logger::log([
+                    'message' => $result->getErrorMessages(),
+                    'fields' => array_merge(['ID' => $kodikResult['ID']], $fields)
+                ]);
+            }
         }
 
         $elementIds = self::addElements($videoIds);
@@ -92,10 +94,12 @@ class Import
             $infoId = $result->getId();
         }
 
-        Logger::log([
-            'message' => $result->getErrorMessages(),
-            'fields' => array_merge(['ID' => $infoId], $fields)
-        ]);
+        if (!$result->isSuccess()) {
+            Logger::log([
+                'message' => $result->getErrorMessages(),
+                'fields' => array_merge(['ID' => $infoId], $fields)
+            ]);
+        }
 
         return $infoId;
     }
@@ -118,10 +122,12 @@ class Import
             $translationId = $result->getId();
         }
 
-        Logger::log([
-            'message' => $result->getErrorMessages(),
-            'fields' => array_merge(['ID' => $translationId], $fields)
-        ]);
+        if (!$result->isSuccess()) {
+            Logger::log([
+                'message' => $result->getErrorMessages(),
+                'fields' => array_merge(['ID' => $translationId], $fields)
+            ]);
+        }
 
         return $translationId;
     }
@@ -151,10 +157,12 @@ class Import
             $dataId = $result->getId();
         }
 
-        Logger::log([
-            'message' => $result->getErrorMessages(),
-            'fields' => array_merge(['ID' => $dataId], $fields)
-        ]);
+        if (!$result->isSuccess()) {
+            Logger::log([
+                'message' => $result->getErrorMessages(),
+                'fields' => array_merge(['ID' => $dataId], $fields)
+            ]);
+        }
 
         return $dataId;
     }
@@ -246,10 +254,12 @@ class Import
             $fields = ['IBLOCK_ELEMENT_ID' => $elementId];
 
             $result = InfoTable::update($info['ID'], $fields);
-            Logger::log([
-                'message' => $result->getErrorMessages(),
-                'fields' => array_merge(['ID' => $info['ID']], $fields)
-            ]);
+            if (!$result->isSuccess()) {
+                Logger::log([
+                    'message' => $result->getErrorMessages(),
+                    'fields' => array_merge(['ID' => $info['ID']], $fields)
+                ]);
+            }
 
             $elementIds[] = $elementId;
         }
@@ -352,7 +362,7 @@ class Import
             }
 
             if ($stageIds && $fields = self::parseData($stageIds)) {
-                
+
                 CIBlockElement::SetPropertyValuesEx($item['IBLOCK_ELEMENT_ID'], Core::getIBlock(), $fields['PROPERTY_VALUES']);
 
                 unset($fields['PROPERTY_VALUES']);

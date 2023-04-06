@@ -14,14 +14,16 @@ class Logger
 
         $trace = debug_backtrace();
 
-        if (is_array($info)) {
-            $info = serialize($info);
-        }
-
-        LogTable::add([
+        $fields = [
             'FILE' => $trace[0]['file'],
             'LINE' => $trace[0]['line'],
             'MESSAGE' => $info,
-        ]);
+        ];
+
+        $result = LogTable::add($fields);
+
+        if (!$result->isSuccess()) {
+            var_dump($result->getErrorMessages());
+        }
     }
 }

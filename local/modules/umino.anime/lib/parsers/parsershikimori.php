@@ -28,7 +28,8 @@ class ParserShikimori extends Parser implements ParserInterface
     public function getImage()
     {
         $find = $this->phpQuery->find('picture img');
-        return CFile::MakeFileArray(pq($find)->attr('src'));
+        $srcset = explode(' ', pq($find)->attr('srcset'))[0];
+        return CFile::MakeFileArray($srcset);
     }
 
     public function getDescription()
@@ -72,7 +73,9 @@ class ParserShikimori extends Parser implements ParserInterface
     public function getGenres(): array
     {
         $genres = [];
-        $result = $this->getInfoContainer('Жанры:')->find('span.genre-ru');
+        $result = $this->getInfoContainer('Жанры:');
+        if (is_null($result)) return $genres;
+        $result = $result->find('span.genre-ru');
         foreach ($result as $genre) {
             $genres[] = self::getText(pq($genre));
         }
