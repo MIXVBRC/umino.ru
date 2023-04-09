@@ -131,6 +131,47 @@ CJSCore::Init(array("jquery"));
     </div>
 </div>
 
+<!--<script type="application/ld+json">-->
+<!--    {-->
+<!--        "@context": "https://schema.org",-->
+<!--        "@type": "TVSeries",-->
+<!--        "actor": [-->
+<!--            {-->
+<!--                "@type": "Person",-->
+<!--                "name": "Justin Chambers"-->
+<!--            },-->
+<!--            {-->
+<!--                "@type": "Person",-->
+<!--                "name": "Jessica Capshaw"-->
+<!--            }-->
+<!--        ],-->
+<!--        "author": {-->
+<!--            "@type": "Person",-->
+<!--            "name": "Shonda Rimes"-->
+<!--        },-->
+<!--        "name": "Greys Anatomy",-->
+<!--        "containsSeason": [-->
+<!--            {-->
+<!--                "@type": "TVSeason",-->
+<!--                "datePublished": "2005-05-22",-->
+<!--                "name": "Season 1",-->
+<!--                "numberOfEpisodes": "14"-->
+<!--            },-->
+<!--            {-->
+<!--                "@type": "TVSeason",-->
+<!--                "datePublished": "2006-05-14",-->
+<!--                "episode": {-->
+<!--                    "@type": "TVEpisode",-->
+<!--                    "episodeNumber": "1",-->
+<!--                    "name": "Episode 1"-->
+<!--                },-->
+<!--                "name": "Season 2",-->
+<!--                "numberOfEpisodes": "27"-->
+<!--            }-->
+<!--        ]-->
+<!--    }-->
+<!--</script>-->
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         $('[data-translation]').on('click', function () {
@@ -145,6 +186,7 @@ CJSCore::Init(array("jquery"));
                 data: {
                     XML_ID: $(this).data('xml-id'),
                     SEASON: <?=$arResult['PROPERTIES']['SEASON']['VALUE']?>,
+                    EPISODE: 1,
                 },
                 async: false,
                 success: function(data) {

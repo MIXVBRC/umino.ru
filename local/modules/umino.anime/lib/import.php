@@ -4,7 +4,6 @@
 namespace Umino\Anime;
 
 use Bitrix\Iblock\ElementTable;
-use Bitrix\Main\ORM\Fields\ArrayField;
 use Bitrix\Main\Type\DateTime;
 use CIBlockElement;
 use CModule;
@@ -12,6 +11,7 @@ use CUtil;
 use Umino\Anime\Parsers\ParserShikimori;
 use Umino\Anime\Parsers\ParserWorldArt;
 use Umino\Anime\Tables\DataTable;
+use Umino\Anime\Tables\EpisodesTable;
 use Umino\Anime\Tables\Info;
 use Umino\Anime\Tables\InfoTable;
 use Umino\Anime\Tables\KodikResultTable;
@@ -33,6 +33,17 @@ class Import
         $kodikResults = KodikResultTable::getList([
             'limit' => $limit > 0 ? $limit : Core::getFillElementCount(),
             'order' => ['DATE_IMPORT' => 'ASC'],
+            'runtime' => [
+                new \Bitrix\Main\Entity\ReferenceField(
+                    'KODIK_RESULT',
+                    KodikResultTable::class,
+                    [
+                        '=this.ID' => 'ref.ID',
+                        '>this.DATE_UPDATE' => 'ref.DATE_IMPORT',
+                    ],
+                    ['join_type' => 'INNER']
+                )
+            ],
         ])->fetchAll();
 
         if (empty($kodikResults)) return;
@@ -162,6 +173,27 @@ class Import
                 'message' => $result->getErrorMessages(),
                 'fields' => array_merge(['ID' => $dataId], $fields)
             ]);
+        } else {
+
+            $episodes = EpisodesTable::getList([
+                'filter' => ['RESULT_ID' => $item['ID']],
+                'select' => ['ID', 'DATA_ID'],
+            ])->fetchAll();
+
+            foreach ($episodes as $episode) {
+
+                if ($episode['DATA_ID'] == $result->getId()) continue;
+
+                $fields = ['DATA_ID' => $result->getId()];
+                $update = EpisodesTable::update($episode['ID'], $fields);
+                if (!$update->isSuccess()) {
+                    Logger::log([
+                        'message' => $update->getErrorMessages(),
+                        'fields' => array_merge(['ID' => $episode['ID']], $fields)
+                    ]);
+                }
+                usleep(5000);
+            }
         }
 
         return $dataId;

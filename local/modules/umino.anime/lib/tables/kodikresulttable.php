@@ -14,6 +14,7 @@ use Bitrix\Main;
  * <li> TYPE string
  * <li> DATE_CREATE datetime
  * <li> DATE_UPDATE datetime
+ * <li> DATE_IMPORT datetime
  * <li> LINK string
  * <li> TITLE string
  * <li> TITLE_ORIG array

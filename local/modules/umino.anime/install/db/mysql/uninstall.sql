@@ -4,3 +4,4 @@ drop table if exists umino_anime_translation;
 drop table if exists umino_anime_request;
 drop table if exists umino_anime_result;
 drop table if exists umino_anime_log;
+drop table if exists umino_anime_episodes;

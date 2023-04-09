@@ -93,3 +93,14 @@ create table if not exists umino_anime_log (
   LINE varchar(255) not null,
   MESSAGE text not null,
   primary key (ID));
+
+create table if not exists umino_anime_episodes (
+   ID int(18) not null auto_increment,
+   DATE_CREATE datetime not null default current_timestamp,
+   RESULT_ID int(18) not null,
+   DATA_ID int(18) not null,
+   SEASON int(18) not null,
+   EPISODE int(18) not null,
+   SEASON_LINK varchar(255) not null,
+   EPISODE_LINK varchar(255) not null,
+   primary key (ID));

@@ -4,6 +4,7 @@
 namespace Umino\Anime;
 
 use Bitrix\Main\Type\DateTime;
+use Umino\Anime\Tables\EpisodesTable;
 use Umino\Anime\Tables\KodikRequestTable;
 use Umino\Anime\Tables\KodikResultTable;
 
@@ -80,11 +81,17 @@ class API
                 'filter' => ['REQUEST_ID' => $kodikRequest['ID']]
             ])->fetchAll();
 
-            if ($full) self::full($kodikResults);
+            if ($kodikResults) {
 
-            $kodikRequest['RESULTS'] = $kodikResults;
+                if ($full) self::full($kodikResults);
 
-            return $kodikRequest;
+                $kodikRequest['RESULTS'] = $kodikResults;
+
+                return $kodikRequest;
+
+            } else {
+                KodikRequestTable::delete($kodikRequest['ID']);
+            }
         }
 
         $request = Request::getContent($url, true);
@@ -116,16 +123,22 @@ class API
 
         $kodikResults = KodikResultTable::getList([
             'filter' => ['KODIK_ID' => $resultIds],
-            'select' => ['ID', 'KODIK_ID'],
+            'select' => ['ID', 'KODIK_ID', 'UPDATED_AT'],
         ])->fetchAll();
 
         $kodikResultIds = [];
 
         foreach ($kodikResults as $kodikResult) {
-            $kodikResultIds[$kodikResult['KODIK_ID']] = $kodikResult['ID'];
+            $kodikResultIds[$kodikResult['KODIK_ID']] = [
+                'ID' => $kodikResult['ID'],
+                'UPDATED_AT' => $kodikResult['UPDATED_AT'],
+            ];
         }
 
         foreach ($request['RESULTS'] as $result) {
+
+            $seasons = $result['SEASONS'];
+            unset($result['SEASONS']);
 
             $fields = array_merge($result, [
                 'OTHER_TITLE' => array_map(function ($title) { return trim($title); }, explode('/', $result['OTHER_TITLE'])),
@@ -137,26 +150,82 @@ class API
 
             unset($fields['ID']);
 
+            $resultId = null;
+
             if ($kodikResultIds && $kodikResultIds[$fields['KODIK_ID']]) {
+
+                if ($fields['UPDATED_AT'] == $kodikResultIds[$fields['KODIK_ID']]['UPDATED_AT']) continue;
+
                 unset($fields['REQUEST_ID']);
-                $update = KodikResultTable::update($kodikResultIds[$fields['KODIK_ID']], $fields);
+
+                $update = KodikResultTable::update($kodikResultIds[$fields['KODIK_ID']]['ID'], $fields);
+
                 if (!$update->isSuccess()) {
+
                     Logger::log([
                         'message' => $update->getErrorMessages(),
-                        'id' => $kodikResultIds[$fields['KODIK_ID']],
-                        'fields' => $fields,
+                        'fields' => array_merge(['ID' => $kodikResultIds[$fields['KODIK_ID']]['ID']], $fields),
                     ]);
+
+                } else {
+                    $resultId = $update->getId();
                 }
+
             } else {
+
                 $add = KodikResultTable::add($fields);
+
                 if (!$add->isSuccess()) {
+
                     Logger::log([
                         'message' => $add->getErrorMessages(),
                         'fields' => $fields,
                     ]);
+
+                } else {
+                    $resultId = $add->getId();
                 }
             }
 
+            unset($fields);
+
+            if ($resultId) {
+                foreach ($seasons as $seasonNum => $season) {
+
+                    $episodes = EpisodesTable::getList([
+                        'filter' => ['EPISODE_LINK' => $season['EPISODES']],
+                        'select' => ['ID', 'EPISODE_LINK'],
+                    ])->fetchAll();
+
+                    $episodeLinks = [];
+                    foreach ($episodes as $episode) {
+                        $episodeLinks[$episode['ID']] = $episode['EPISODE_LINK'];
+                    }
+
+                    foreach ($season['EPISODES'] as $episodeNum => $episode) {
+                        
+                        $fields = [
+                            'RESULT_ID' => $resultId,
+                            'SEASON' => $seasonNum,
+                            'EPISODE' => $episodeNum,
+                            'SEASON_LINK' => $season['LINK'],
+                            'EPISODE_LINK' => $episode,
+                        ];
+
+                        if (!array_search($episode, $episodeLinks)) {
+                            $add = EpisodesTable::add($fields);
+                            if (!$add->isSuccess()) {
+                                Logger::log([
+                                    'message' => $add->getErrorMessages(),
+                                    'fields' => $fields,
+                                ]);
+                            }
+                        }
+
+                        usleep(5000);
+                    }
+                }
+            }
         }
 
         if ($full) self::full($request['RESULTS']);
@@ -273,7 +342,7 @@ class API
     protected static function search(array $params): array
     {
         $params = array_merge($params, [
-            'with_episodes' => 'false',
+            'with_episodes' => 'true',
             'token' => Core::getAPIToken(),
         ]);
 
