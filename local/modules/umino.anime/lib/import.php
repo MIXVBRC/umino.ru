@@ -4,6 +4,8 @@
 namespace Umino\Anime;
 
 use Bitrix\Iblock\ElementTable;
+use Bitrix\Main\Error;
+use Bitrix\Main\Result;
 use Bitrix\Main\Type\DateTime;
 use CIBlockElement;
 use CModule;
@@ -21,42 +23,62 @@ class Import
 {
     protected static $iblockId;
 
-    public static function start(bool $loadImages = false, int $limit = 0)
+    protected static $infoFields = [];
+    protected static $translationFields = [];
+    protected static $dataFields = [];
+
+    public static function start(array $results): bool
     {
         if (!self::$iblockId = Core::getIBlock()) {
             Logger::log('В настройках модуля не выбран инфоблок для заполнения.');
-            return;
+            return false;
+        } else if (empty($results)) {
+            Logger::log('Пустой массив.');
+            return false;
         }
+
+
+
+        foreach ($results as $result) {
+            $xml_id = md5($result['TITLE_ORIG'] . $result['YEAR']);
+        }
+
+
 
         CModule::IncludeModule('iblock');
 
         $kodikResults = KodikResultTable::getList([
-            'limit' => $limit > 0 ? $limit : Core::getFillElementCount(),
-            'order' => ['DATE_IMPORT' => 'ASC'],
-            'runtime' => [
-                new \Bitrix\Main\Entity\ReferenceField(
-                    'KODIK_RESULT',
-                    KodikResultTable::class,
-                    [
-                        '=this.ID' => 'ref.ID',
-                        '>this.DATE_UPDATE' => 'ref.DATE_IMPORT',
-                    ],
-                    ['join_type' => 'INNER']
-                )
+            'filter' => [
+                '>DATE_UPDATE' => 'KODIK_RESULT.DATE_IMPORT'
             ],
+            'runtime' => [
+                'KODIK_RESULT' => [
+                    'data_type' => KodikResultTable::class,
+                    'reference' => [
+                        '=this.ID' => 'ref.ID',
+                    ],
+                    'join_type' => 'inner',
+                ]
+            ],
+            'order' => ['DATE_IMPORT' => 'ASC'],
+            'limit' => $limit > 0 ? $limit : Core::getFillElementCount(),
         ])->fetchAll();
 
         if (empty($kodikResults)) return;
 
-        $videoIds = [];
+        $infoIds = [];
 
         foreach ($kodikResults as $kodikResult) {
 
-            $videoIds[] = $videoId = self::addInfo($kodikResult);
+            $infoXmlId = self::addInfoFields($kodikResult);
+            $translationXmlId = self::addTranslationFields($kodikResult);
+            $dataXmlId = self::addDataFields($kodikResult);
+
+            $infoIds[] = $infoId = self::addInfo($kodikResult);
 
             $translationId = self::addTranslation($kodikResult);
 
-            self::addData($kodikResult, $videoId, $translationId);
+            self::addData($kodikResult, $infoId, $translationId);
 
             $fields = [
                 'DATE_IMPORT' => new DateTime()
@@ -72,34 +94,188 @@ class Import
             }
         }
 
-        $elementIds = self::addElements($videoIds);
+        self::addElements($infoIds);
+
+        return true;
+    }
+
+    public static function start2(bool $loadImages = false, int $limit = 0)
+    {
+        if (!self::$iblockId = Core::getIBlock()) {
+            Logger::log('В настройках модуля не выбран инфоблок для заполнения.');
+            return;
+        }
+
+        CModule::IncludeModule('iblock');
+
+        $kodikResults = KodikResultTable::getList([
+            'filter' => [
+                '>DATE_UPDATE' => 'KODIK_RESULT.DATE_IMPORT'
+            ],
+            'runtime' => [
+                'KODIK_RESULT' => [
+                    'data_type' => KodikResultTable::class,
+                    'reference' => [
+                        '=this.ID' => 'ref.ID',
+                    ],
+                    'join_type' => 'inner',
+                ]
+            ],
+            'order' => ['DATE_IMPORT' => 'ASC'],
+            'limit' => $limit > 0 ? $limit : Core::getFillElementCount(),
+        ])->fetchAll();
+
+        if (empty($kodikResults)) return;
+
+        $infoIds = [];
+
+        foreach ($kodikResults as $kodikResult) {
+
+            $infoXmlId = self::addInfoFields($kodikResult);
+            $translationXmlId = self::addTranslationFields($kodikResult);
+            $dataXmlId = self::addDataFields($kodikResult);
+
+            $infoIds[] = $infoId = self::addInfo($kodikResult);
+
+            $translationId = self::addTranslation($kodikResult);
+
+            self::addData($kodikResult, $infoId, $translationId);
+
+            $fields = [
+                'DATE_IMPORT' => new DateTime()
+            ];
+
+            $result = KodikResultTable::update($kodikResult['ID'], $fields);
+
+            if (!$result->isSuccess()) {
+                Logger::log([
+                    'message' => $result->getErrorMessages(),
+                    'fields' => array_merge(['ID' => $kodikResult['ID']], $fields)
+                ]);
+            }
+        }
+
+        $elementIds = self::addElements($infoIds);
 
         if ($elementIds && $loadImages) {
             self::loadImages(array_unique($elementIds));
         }
     }
 
-    protected static function addInfo(array $item): int
+    protected static function getDiscrepancy(array $newArray, array $oldArray): array
     {
-        $fields = [
-            'XML_ID' => md5($item['TITLE'] . $item['YEAR']),
+        $result = [];
+
+        foreach ($newArray as $key => $value) {
+
+            if ($oldArray[$key] == $value) continue;
+
+            $result[$key] = $value;
+        }
+
+        return $result;
+    }
+
+    protected static function addInfoFields(array $item): string
+    {
+        $xml_id = md5($item['TITLE_ORIG'] . $item['YEAR']);
+
+        self::$infoFields[$xml_id] = [
+            'XML_ID' => $xml_id,
             'TYPE' => $item['TYPE'],
             'TITLE' => $item['TITLE'],
             'TITLE_ORIGINAL' => $item['TITLE_ORIG'],
             'TITLE_OTHER' => $item['OTHER_TITLE'],
             'YEAR' => $item['YEAR'],
             'SEASON' => $item['LAST_SEASON'],
-            'KODIK_ID' => $item['ID'],
+            'KODIK_ID' => $item['KODIK_ID'],
             'SHIKIMORI_ID' => $item['SHIKIMORI_ID']?:'',
             'WORLDART_LINK' => $item['WORLDART_LINK']?:'',
             'KINOPOISK_ID' => $item['KINOPOISK_ID']?:'',
             'IMDB_ID' => $item['IMDB_ID']?:'',
         ];
 
-        $infoObject = InfoTable::getList(['filter'=>['XML_ID'=>$fields['XML_ID']]])->fetchObject();
+        return $xml_id;
+    }
 
-        if ($infoObject && $infoId = $infoObject->getId())  {
-            $result = InfoTable::update($infoId, $fields);
+    protected static function addTranslationFields(array $item): string
+    {
+        $xml_id = md5($item['TRANSLATION']['TITLE'] . $item['TRANSLATION']['TYPE']);
+
+        self::$translationFields[$xml_id] = [
+            'XML_ID' => $xml_id,
+            'TITLE' => $item['TRANSLATION']['TITLE'],
+            'KODIK_ID' => $item['TRANSLATION']['ID'],
+            'TYPE' => $item['TRANSLATION']['TYPE'],
+        ];
+
+        return $xml_id;
+    }
+
+    protected static function addDataFields(array $item): string
+    {
+        $xml_id = md5($item['TITLE_ORIG'] . $item['TRANSLATION']['ID']);
+
+        self::$dataFields[$xml_id] = [
+            'XML_ID' => $xml_id,
+            'TITLE' => $item['TITLE'] . ' (' . $item['TRANSLATION']['TITLE'] . ')',
+            'INFO_ID' => '',
+            'TRANSLATION_ID' => '',
+            'EPISODES' => $item['LAST_EPISODE'],
+            'EPISODES_ALL' => $item['EPISODES_COUNT'],
+            'QUALITY' => $item['QUALITY'],
+            'LINK' => $item['LINK'],
+            'SCREENSHOTS' => $item['SCREENSHOTS'],
+        ];
+
+        return $xml_id;
+    }
+
+    protected static function addOrUpdate($class, array $fields)
+    {
+        if (!is_object($class)) return false;
+
+        if ($oldFields && $infoId = $oldFields['ID'])  {
+            $discrepancy = self::getDiscrepancy($fields, $oldFields);
+            if ($discrepancy) {
+                $result = $class::update($infoId, $discrepancy);
+            }
+        } else {
+            $result = $class::add($fields);
+            $infoId = $result->getId();
+        }
+
+        return $infoId;
+    }
+
+    protected static function addInfo(array $item): int
+    {
+        $xml_id = md5($item['TITLE_ORIG'] . $item['YEAR']);
+
+        $fields = [
+            'XML_ID' => $xml_id,
+            'TYPE' => $item['TYPE'],
+            'TITLE' => $item['TITLE'],
+            'TITLE_ORIGINAL' => $item['TITLE_ORIG'],
+            'TITLE_OTHER' => $item['OTHER_TITLE'],
+            'YEAR' => $item['YEAR'],
+            'SEASON' => $item['LAST_SEASON'],
+            'KODIK_ID' => $item['KODIK_ID'],
+            'SHIKIMORI_ID' => $item['SHIKIMORI_ID']?:'',
+            'WORLDART_LINK' => $item['WORLDART_LINK']?:'',
+            'KINOPOISK_ID' => $item['KINOPOISK_ID']?:'',
+            'IMDB_ID' => $item['IMDB_ID']?:'',
+        ];
+
+        $result = new Result();
+
+        $info = InfoTable::getList(['filter'=>['XML_ID'=>$xml_id]])->fetch();
+
+        if ($info && $infoId = $info['ID'])  {
+            $discrepancy = self::getDiscrepancy($fields, $info);
+            if ($discrepancy) {
+                $result = InfoTable::update($infoId, $discrepancy);
+            }
         } else {
             $result = InfoTable::add($fields);
             $infoId = $result->getId();
@@ -124,10 +300,15 @@ class Import
             'TYPE' => $item['TRANSLATION']['TYPE'],
         ];
 
-        $translationObject = TranslationTable::getList(['filter'=>['XML_ID'=>$fields['XML_ID']]])->fetchObject();
+        $result = new Result();
 
-        if ($translationObject && $translationId = $translationObject->getId()) {
-            $result = TranslationTable::update($translationId, $fields);
+        $translation = TranslationTable::getList(['filter'=>['XML_ID'=>$fields['XML_ID']]])->fetch();
+
+        if ($translation && $translationId = $translation['ID']) {
+            $discrepancy = self::getDiscrepancy($fields, $translation);
+            if ($discrepancy) {
+                $result = TranslationTable::update($translationId, $discrepancy);
+            }
         } else {
             $result = TranslationTable::add($fields);
             $translationId = $result->getId();
@@ -143,14 +324,14 @@ class Import
         return $translationId;
     }
 
-    protected static function addData(array $item, int $videoId, int $translationId)
+    protected static function addData(array $item, int $infoId, int $translationId)
     {
-        $title = $item['TITLE'] . ' (' . $item['TRANSLATION']['TITLE'] . ')';
+        $xml_id = md5($item['TITLE_ORIG'] . $item['TRANSLATION']['ID']);
 
         $fields = [
-            'XML_ID' => md5($title),
-            'TITLE' => $title,
-            'INFO_ID' => $videoId,
+            'XML_ID' => $xml_id,
+            'TITLE' => $item['TITLE'] . ' (' . $item['TRANSLATION']['TITLE'] . ')',
+            'INFO_ID' => $infoId,
             'TRANSLATION_ID' => $translationId,
             'EPISODES' => $item['LAST_EPISODE'],
             'EPISODES_ALL' => $item['EPISODES_COUNT'],
@@ -159,10 +340,15 @@ class Import
             'SCREENSHOTS' => $item['SCREENSHOTS'],
         ];
 
-        $dataObject = DataTable::getList(['filter'=>['XML_ID'=>$fields['XML_ID']]])->fetchObject();
+        $result = new Result();
 
-        if ($dataObject && $dataId = $dataObject->getId()) {
-            $result = DataTable::update($dataId, $fields);
+        $data = DataTable::getList(['filter'=>['XML_ID'=>$fields['XML_ID']]])->fetch();
+
+        if ($data && $dataId = $data['ID']) {
+            $discrepancy = self::getDiscrepancy($fields, $data);
+            if ($discrepancy) {
+                $result = DataTable::update($dataId, $discrepancy);
+            }
         } else {
             $result = DataTable::add($fields);
             $dataId = $result->getId();
@@ -182,9 +368,9 @@ class Import
 
             foreach ($episodes as $episode) {
 
-                if ($episode['DATA_ID'] == $result->getId()) continue;
+                if ($episode['DATA_ID'] == $dataId) continue;
 
-                $fields = ['DATA_ID' => $result->getId()];
+                $fields = ['DATA_ID' => $dataId];
                 $update = EpisodesTable::update($episode['ID'], $fields);
                 if (!$update->isSuccess()) {
                     Logger::log([

@@ -3,6 +3,9 @@
 
 namespace Umino\Anime;
 
+use Bitrix\Main\Application;
+use Bitrix\Main\Error;
+use Bitrix\Main\Result;
 use Bitrix\Main\Type\DateTime;
 use Umino\Anime\Tables\EpisodesTable;
 use Umino\Anime\Tables\KodikRequestTable;
@@ -64,11 +67,37 @@ class API
         return array_keys(self::$types);
     }
 
+    protected static function request(string $url): array
+    {
+        $request = Request::getContent($url, true);
+
+        Core::keysToUpperCase($request);
+
+        $results = $request['RESULTS'];
+
+        $fields = array_merge($request, [
+            'URL' => $url,
+            'TYPE' => $url,
+            'RESULTS_COUNT' => count($results)
+        ]);
+
+        $kodikRequestAdd = KodikRequestTable::add($fields);
+
+        if (!$kodikRequestAdd->isSuccess()) {
+            Logger::log([
+                'message' => $kodikRequestAdd->getErrorMessages(),
+                'fields' => $fields,
+            ]);
+        }
+
+        return $results;
+    }
+
     /**
      * @param string $url
      * @return array
      */
-    protected static function request(string $url, bool $full = true): array
+    protected static function request2(string $url): array
     {
         $kodikRequest = KodikRequestTable::getList([
             'filter' => [
@@ -83,7 +112,19 @@ class API
 
             if ($kodikResults) {
 
-                if ($full) self::full($kodikResults);
+                foreach ($kodikResults as &$kodikResult) {
+
+                    $episodes = EpisodesTable::getList([
+                        'filter' => ['RESULT_ID' => $kodikResult['ID']],
+                    ])->fetchAll();
+
+                    if ($episodes) {
+                        foreach ($episodes as $episode) {
+                            $kodikResult['SEASONS'][$episode['SEASON']]['LINK'] = $episode['SEASON_LINK'];
+                            $kodikResult['SEASONS'][$episode['SEASON']]['EPISODES'][$episode['EPISODE']] = $episode['EPISODE_LINK'];
+                        }
+                    }
+                }
 
                 $kodikRequest['RESULTS'] = $kodikResults;
 
@@ -136,6 +177,8 @@ class API
         }
 
         foreach ($request['RESULTS'] as $result) {
+
+            if (explode('-', $result['ID'])[0] !== 'serial') continue;
 
             $seasons = $result['SEASONS'];
             unset($result['SEASONS']);
@@ -190,6 +233,9 @@ class API
             unset($fields);
 
             if ($resultId) {
+
+                $episodesRows = [];
+
                 foreach ($seasons as $seasonNum => $season) {
 
                     $episodes = EpisodesTable::getList([
@@ -203,32 +249,49 @@ class API
                     }
 
                     foreach ($season['EPISODES'] as $episodeNum => $episode) {
-                        
+
                         $fields = [
                             'RESULT_ID' => $resultId,
-                            'SEASON' => $seasonNum,
+                            'SEASON' => $seasonNum>0?$seasonNum:1,
                             'EPISODE' => $episodeNum,
                             'SEASON_LINK' => $season['LINK'],
                             'EPISODE_LINK' => $episode,
                         ];
 
                         if (!array_search($episode, $episodeLinks)) {
-                            $add = EpisodesTable::add($fields);
-                            if (!$add->isSuccess()) {
-                                Logger::log([
-                                    'message' => $add->getErrorMessages(),
-                                    'fields' => $fields,
-                                ]);
-                            }
+                            $episodesRows[] = $fields;
+
                         }
+
+                        unset($fields);
 
                         usleep(5000);
                     }
                 }
+
+                if ($episodesRows) {
+
+                    $addMulti = new Result();
+
+                    try {
+                        $connection = Application::getConnection();
+                        $connection->addMulti(EpisodesTable::getTableName(), $episodesRows);
+                    } catch (\Exception $exception) {
+                        $addMulti->addError(new Error($exception->getMessage()));
+                    }
+
+                    if (!$addMulti->isSuccess()) {
+                        $episodesRows = array_chunk($episodesRows, 12);
+                        foreach ($episodesRows as $episodes) {
+                            Logger::log([
+                                'message' => $add->getErrorMessages(),
+                                'fields' => $episodes,
+                            ]);
+                        }
+                    }
+                }
             }
         }
-
-        if ($full) self::full($request['RESULTS']);
 
         return $request;
     }
@@ -261,6 +324,8 @@ class API
         $pageCount = $pageCount > 0 ? $pageCount : 1;
 
         $params = [
+            'with_episodes' => 'true',
+            'with_material_data' => 'true',
             'token' => Core::getAPIToken(),
             'limit' => Core::getAPILimit(),
             'types' => implode(',', self::$types[$type]),
@@ -343,12 +408,13 @@ class API
     {
         $params = array_merge($params, [
             'with_episodes' => 'true',
+            'with_material_data' => 'true',
             'token' => Core::getAPIToken(),
         ]);
 
         $url = Request::buildURL([__FUNCTION__], $params);
 
-        return self::request($url, false);
+        return self::request($url);
     }
 
     /**
