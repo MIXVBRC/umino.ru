@@ -5,7 +5,7 @@
  * @param bool $var_dump
  * @param bool $die
  */
-function pre($data, $var_dump = false, $die = false)
+function pre($data, $die = false)
 {
     $style = 'background-color: #fff; color:#000; padding: 10px; border-radius: 5px;';
 
@@ -16,7 +16,7 @@ function pre($data, $var_dump = false, $die = false)
     echo '<pre style="'.$style.'">';
     print_r($arInfo);
     echo '<br>';
-    $var_dump ? var_dump($data) : print_r($data);
+    print_r($data);
     echo '</pre>';
 
     if ($die) die;

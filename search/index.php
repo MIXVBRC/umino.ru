@@ -32,7 +32,7 @@ $APPLICATION->SetTitle("Поиск аниме");
 		"USE_SUGGEST" => "N",
 		"USE_TITLE_RANK" => "Y",
 		"arrFILTER" => array(
-			0 => "iblock_content",
+			0 => "iblock_umino",
 		),
 		"arrFILTER_iblock_content" => array(
 			0 => "5",
@@ -60,7 +60,10 @@ $APPLICATION->SetTitle("Поиск аниме");
 		"SHOW_ITEM_TAGS" => "Y",
 		"SHOW_ITEM_DATE_CHANGE" => "Y",
 		"SHOW_ORDER_BY" => "Y",
-		"SHOW_TAGS_CLOUD" => "N"
+		"SHOW_TAGS_CLOUD" => "N",
+		"arrFILTER_iblock_umino" => array(
+			0 => "11",
+		)
 	),
 	false
 );?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

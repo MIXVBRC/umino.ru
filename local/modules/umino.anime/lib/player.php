@@ -21,6 +21,8 @@ class Player
 
         $this->height = $this->height / $this->width * $width;
         $this->width = $width;
+
+        return $this;
     }
 
     /**

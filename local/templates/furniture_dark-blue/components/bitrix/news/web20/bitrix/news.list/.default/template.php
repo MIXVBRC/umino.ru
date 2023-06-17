@@ -26,9 +26,9 @@ $this->setFrameMode(true);
                     border="0"
                     width="100%"
                     height="400"
-                    src="<?=$arItem["PREVIEW_PICTURE"]["SRC"]?>"
-                    alt="<?=$arItem["PREVIEW_PICTURE"]["ALT"]?>"
-                    title="<?=$arItem["PREVIEW_PICTURE"]["TITLE"]?>"
+                    src="<?=$arItem["DETAIL_PICTURE"]["SRC"]?>"
+                    alt="<?=$arItem["DETAIL_PICTURE"]["ALT"]?>"
+                    title="<?=$arItem["DETAIL_PICTURE"]["TITLE"]?>"
             />
             <div>
                 <?if($arParams["DISPLAY_NAME"]!="N" && $arItem["NAME"]):?>

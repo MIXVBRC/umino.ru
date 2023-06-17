@@ -10,7 +10,7 @@ class Logger
 {
     public static function log($info)
     {
-        if (empty($info['message'])) return;
+        if (empty($info)) return;
 
         $trace = debug_backtrace();
 

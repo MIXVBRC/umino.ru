@@ -11,7 +11,7 @@ namespace Umino\Anime;
 class Lock
 {
     /** @var string */
-    private static $dir = '/../lockfiles/';
+    private static $dir = '/';
 
     /** @var null */
     protected $key = null;

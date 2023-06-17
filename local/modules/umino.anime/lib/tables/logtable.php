@@ -6,7 +6,7 @@ namespace Umino\Anime\Tables;
 use Bitrix\Main;
 
 /**
- * Class DataTable
+ * Class LogTable
  *
  * Fields:
  * <ul>

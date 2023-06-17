@@ -1,4 +1,6 @@
-<?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+<? use Umino\Anime\Core;
+
+if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 /** @var array $arParams */
 /** @var array $arResult */
 /** @global CMain $APPLICATION */
@@ -15,15 +17,15 @@ $this->setFrameMode(true);
 CJSCore::Init(array("jquery"));
 ?>
 <div class="news-detail">
-	<?if($arParams["DISPLAY_PICTURE"]!="N" && is_array($arResult["PREVIEW_PICTURE"])):?>
+	<?if($arParams["DISPLAY_PICTURE"]!="N" && is_array($arResult["DETAIL_PICTURE"])):?>
 		<img
 			class="detail_picture"
 			border="0"
-			src="<?=$arResult["PREVIEW_PICTURE"]["SRC"]?>"
-			width="<?=$arResult["PREVIEW_PICTURE"]["WIDTH"]?>"
-			height="<?=$arResult["PREVIEW_PICTURE"]["HEIGHT"]?>"
-			alt="<?=$arResult["PREVIEW_PICTURE"]["ALT"]?>"
-			title="<?=$arResult["PREVIEW_PICTURE"]["TITLE"]?>"
+			src="<?=$arResult["DETAIL_PICTURE"]["SRC"]?>"
+			width="<?=$arResult["DETAIL_PICTURE"]["WIDTH"]?>"
+			height="<?=$arResult["DETAIL_PICTURE"]["HEIGHT"]?>"
+			alt="<?=$arResult["DETAIL_PICTURE"]["ALT"]?>"
+			title="<?=$arResult["DETAIL_PICTURE"]["TITLE"]?>"
 			/>
 	<?endif?>
 	<?if($arParams["DISPLAY_DATE"]!="N" && $arResult["DISPLAY_ACTIVE_FROM"]):?>
@@ -106,25 +108,103 @@ CJSCore::Init(array("jquery"));
         [data-translation] {
             cursor: pointer;
         }
+
+        .video-player ul {
+            padding: unset;
+        }
+
+        .video-player li {
+            cursor: pointer;
+        }
+
+        [data-player] {
+            padding: 15px;
+        }
+
+        /*.video-player span:not([data-active]) + ul {*/
+        /*    display: none;*/
+        /*}*/
     </style>
-    <div>
+    <div class="video-player">
         <div><b>Выберите озвучку: </b></div>
-        <ul class="translation-list">
+        <div class="translation-list">
         <?
-        $dataList = \Umino\Anime\Tables\DataTable::getList([
-                'filter' => [
-                    'INFO.XML_ID' => $arResult['EXTERNAL_ID']
-                ],
-            'select' => [
-                'XML_ID',
-                'TRANSLATION_TITLE' => 'TRANSLATION.TITLE',
+            $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
+            'filter' => [
+                'SERIAL_XML_ID' => $arResult['XML_ID'],
             ],
         ])->fetchAll();
 
-        foreach ($dataList as $data): ?>
-            <li><span data-translation data-season="" data-xml-id="<?=$data['XML_ID']?>"><?=$data['TRANSLATION_TITLE']?></span></li>
+        $translations = [];
+        foreach ($episodes as $episode) {
+            $translations[] = $episode['TRANSLATION_XML_ID'];
+        }
+
+        $translations = array_unique($translations);
+
+        $translationsDB = CIBlockElement::GetList([],[
+            'XML_ID' => $translations
+        ],false,false, ['NAME', 'XML_ID', 'PROPERTY_TYPE']);
+
+        $translations = [];
+        while ($translation = $translationsDB->GetNext()) {
+            $translations[$translation['XML_ID']] = [
+                'NAME' => $translation['NAME'],
+                'XML_ID' => $translation['XML_ID'],
+                'TYPE' => $translation['PROPERTY_TYPE_VALUE'],
+            ];
+        }
+
+        $result = [];
+        foreach ($episodes as $episode) {
+            $translation = $translations[$episode['TRANSLATION_XML_ID']]['NAME'];
+            if ($episode['EPISODES']) {
+                $result[$translation][$episode['SEASON']] = [
+                    'TYPE' => $episode['TYPE']?:'Эпизоды',
+                    'EPISODES' => $episode['EPISODES'],
+                ];
+            } else {
+                $result[$translation] = [
+                    'TYPE' => $episode['TYPE'],
+                    'LINK' => $episode['ANIME_LINK'],
+                ];
+            }
+        }
+        pre($result);
+        ?>
+
+        <? foreach ($result as $translation => $seasons): ?>
+            <div>
+                <? if (is_array($seasons)): ?>
+                    <h3><?=$translation?></h3>
+                    <? foreach ($seasons as $season => $item): ?>
+                        <div>
+<!--                            <br>-->
+<!--                            <h4>Сезон: --><?//=$season?><!--</h4>-->
+                            <h5><?=$item['TYPE']?></h5>
+                            <ul>
+                                <? foreach ($item['EPISODES'] as $episode => $link): ?>
+                                    <li>
+                                        <span data-link="<?=$link?>"><?=$episode?></span>
+                                    </li>
+                                <? endforeach ?>
+                            </ul>
+                        </div>
+                    <? endforeach ?>
+                <? else: ?>
+                    <? if ($item['TYPE']): ?>
+                        <h5><?=$item['TYPE']?></h5>
+                    <? endif; ?>
+                    <ul>
+                        <li>
+                            <span data-link="<?=$seasons['LINK']?>"><?=$translation?></span>
+                        </li>
+                    </ul>
+                <? endif ?>
+            </div>
+            <hr>
         <? endforeach; ?>
-        </ul>
+        </div>
         <br>
         <br>
         <div data-player></div>
@@ -174,29 +254,38 @@ CJSCore::Init(array("jquery"));
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('[data-translation]').on('click', function () {
-            if ($(this).attr('data-active') !== undefined) return;
-            $('[data-translation]').removeAttr('data-active');
-            $(this).attr('data-active','');
+        $('[data-link]').on('click', function () {
+            let link = $(this).data('link')
+            let player = $('[data-player]');
+            let width = $(player).width();
+            let height = 720 / 1280 * width;
 
-            $.ajax({
-                url: '<?=$templateFolder?>/ajax.php',
-                method: 'get',
-                dataType: 'html',
-                data: {
-                    XML_ID: $(this).data('xml-id'),
-                    SEASON: <?=$arResult['PROPERTIES']['SEASON']['VALUE']?>,
-                    EPISODE: 1,
-                },
-                async: false,
-                success: function(data) {
-                    $('[data-player]').html(data);
-                }
-            });
-
-            $('html, body').animate({
-                scrollTop: $('[data-player]').offset().top // класс объекта к которому приезжаем
-            }, 300);
+            $('[data-player]').html('<iframe src="'+link+'?hide_selectors=true" width="'+width+'" height="'+height+'" frameborder="0" allowfullscreen=""></iframe>')
         });
+
+        //$('[data-translation]').on('click', function () {
+        //    if ($(this).attr('data-active') !== undefined) return;
+        //    $('[data-translation]').removeAttr('data-active');
+        //    $(this).attr('data-active','');
+        //
+        //    $.ajax({
+        //        url: '<?//=$templateFolder?>///ajax.php',
+        //        method: 'get',
+        //        dataType: 'html',
+        //        data: {
+        //            XML_ID: $(this).data('xml-id'),
+        //            SEASON: <?//=$arResult['PROPERTIES']['SEASON']['VALUE']?>//,
+        //            EPISODE: 1,
+        //        },
+        //        async: false,
+        //        success: function(data) {
+        //            $('[data-player]').html(data);
+        //        }
+        //    });
+        //
+        //    $('html, body').animate({
+        //        scrollTop: $('[data-player]').offset().top // класс объекта к которому приезжаем
+        //    }, 300);
+        //});
     });
 </script>
