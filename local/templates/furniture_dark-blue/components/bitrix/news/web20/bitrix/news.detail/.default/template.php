@@ -132,6 +132,13 @@ CJSCore::Init(array("jquery"));
             $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
             'filter' => [
                 'SERIAL_XML_ID' => $arResult['XML_ID'],
+                'ACTIVE' => 'Y',
+                [
+                    'LOGIC' => 'OR',
+                    ['TYPE' => false],
+                    ['TYPE' => ['OVA']],
+                ],
+//                'EPISODES_COUNT' => $arResult['PROPERTIES']['EPISODES_AIRED']['VALUE']
             ],
         ])->fetchAll();
 
@@ -170,7 +177,6 @@ CJSCore::Init(array("jquery"));
                 ];
             }
         }
-        pre($result);
         ?>
 
         <? foreach ($result as $translation => $seasons): ?>
@@ -208,6 +214,10 @@ CJSCore::Init(array("jquery"));
         <br>
         <br>
         <div data-player></div>
+        <iframe src="//kodik.info/serial/9153/cddf6e92e8e68f202dc7c8cac0c4ed7c/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
+        <iframe src="//kodik.info/season/82121/c9b10ebb0eb71f979dbd5518218ab5c3/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
+        <iframe src="//kodik.info/seria/1014571/22df9cdc28101f4acf4fb57ac537dcd5/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
+
     </div>
 </div>
 
