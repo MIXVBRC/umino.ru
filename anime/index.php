@@ -193,7 +193,7 @@ $APPLICATION->SetTitle("Аниме");
 		"SLIDER_PROPERTY" => "",
 		"SORT_BY1" => "TIMESTAMP_X",
 		"SORT_BY2" => "NAME",
-		"SORT_ORDER1" => "DESC",
+		"SORT_ORDER1" => "ASC",
 		"SORT_ORDER2" => "DESC",
 		"STRICT_SECTION_CHECK" => "N",
 		"TAGS_CLOUD_ELEMENTS" => "150",

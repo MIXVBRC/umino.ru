@@ -6,7 +6,6 @@ namespace Umino\Anime;
 use Bitrix\Iblock\ElementPropertyTable;
 use Bitrix\Iblock\ElementTable;
 use Bitrix\Iblock\PropertyTable;
-use Bitrix\Main\Event;
 use Bitrix\Main\ORM\Query\Join;
 use Bitrix\Main\ORM\Query\Query;
 use Bitrix\Main\Type\DateTime;
@@ -32,9 +31,11 @@ class Import
     protected int $memory = 0;
     protected array $memories = [];
 
+    protected static array $imageTypes = ['png', 'jpeg', 'jpg'];
+
     protected static array $lang = [
         'STUDIOS' => 'Студии',
-        'PERSONS' => 'Персоны',
+        'PEOPLE' => 'Люди',
         'GENRES' => 'Жанры',
         'TRANSLATIONS' => 'Студии переводов',
         'ANIME' => 'Сериалы',
@@ -89,7 +90,7 @@ class Import
             $errors[] = 'Модуль инфоблоков не подключен';
         } else if (!$this->iblocks['STUDIOS']  = Core::getStudiosIBlockID()) {
             $errors[] = 'Не выбран инфоблок для студий';
-        } else if (!$this->iblocks['PERSONS']  = Core::getPersonsIBlockID()) {
+        } else if (!$this->iblocks['PEOPLE']  = Core::getPeopleIBlockID()) {
             $errors[] = 'Не выбран инфоблок для персон';
         } else if (!$this->iblocks['GENRES']  = Core::getGenresIBlockID()) {
             $errors[] = 'Не выбран инфоблок для жанров';
@@ -146,6 +147,7 @@ class Import
             $this->collectEpisodes($item, $serialXmlId, $translationXmlId);
         }
 
+
         self::showMemoryUsage($this);
 
         $this->elements = $this->getItems();
@@ -195,7 +197,7 @@ class Import
 
                 $this->addEpisodes($fields);
 
-            } else if (in_array($type, ['ANIME', 'PERSONS'])) {
+            } else {
 
                 $this->addElements($type, $fields);
 
@@ -352,7 +354,9 @@ class Import
         foreach ($items as $xmlId => $item) {
             if ($element = $this->elements[$type][$xmlId]) {
 
-                if (in_array($type, ['ANIME']) && $element['MODIFIED_BY'] == $this->userId) {pre($item);
+                if (!in_array($type, ['ANIME', 'PEOPLE'])) continue;
+
+                if (in_array($type, ['ANIME']) && $element['MODIFIED_BY'] == $this->userId) {
                     $date_update_new = self::getDate($item['DATE_UPDATE'])->toString();
                     $date_update_old = self::getDate($element['DATE_UPDATE'])->toString();
 
@@ -466,7 +470,7 @@ class Import
         return $result;
     }
 
-    protected function collectPersons(array $materialData, string $key): array
+    protected function collectPeople(array $materialData, string $key): array
     {
         $result = [];
 
@@ -552,6 +556,12 @@ class Import
     {
         $materialData = $item['MATERIAL_DATA'];
 
+        $uniqueness = implode('-', [
+            $item['SHIKIMORI_ID'],
+            $materialData['TITLE_EN'],
+            $item['TYPE'],
+        ]);
+
         $fields = [
             'XML_ID' => self::getXmlId($materialData['TITLE_EN']),
             'CODE' => self::getCode($materialData['TITLE_EN']),
@@ -581,6 +591,7 @@ class Import
             'GENRES' => $this->collectGenres($materialData, 'GENRES'),
             'ANIME_GENRES' => $this->collectGenres($materialData, 'ANIME_GENRES'),
             'ANIME_STUDIOS' => $this->collectStudios($materialData['ANIME_STUDIOS']?:[]),
+            'BLOCKED_COUNTRIES' => $item['BLOCKED_COUNTRIES'],
             'KINOPOISK_RATING' => $materialData['KINOPOISK_RATING'],
             'KINOPOISK_VOTES' => $materialData['KINOPOISK_VOTES'],
             'IMDB_RATING' => $materialData['IMDB_RATING'],
@@ -593,11 +604,11 @@ class Import
             'MINIMAL_AGE' => $materialData['MINIMAL_AGE'],
             'EPISODES_TOTAL' => $materialData['EPISODES_TOTAL'],
             'EPISODES_AIRED' => $materialData['EPISODES_AIRED'],
-            'ACTORS' => $this->collectPersons($materialData, 'ACTORS'),
-            'DIRECTORS' => $this->collectPersons($materialData, 'DIRECTORS'),
-            'WRITERS' => $this->collectPersons($materialData, 'WRITERS'),
-            'COMPOSERS' => $this->collectPersons($materialData, 'COMPOSERS'),
-            'OPERATORS' => $this->collectPersons($materialData, 'OPERATORS'),
+            'ACTORS' => $this->collectPeople($materialData, 'ACTORS'),
+            'DIRECTORS' => $this->collectPeople($materialData, 'DIRECTORS'),
+            'WRITERS' => $this->collectPeople($materialData, 'WRITERS'),
+            'COMPOSERS' => $this->collectPeople($materialData, 'COMPOSERS'),
+            'OPERATORS' => $this->collectPeople($materialData, 'OPERATORS'),
             'KINOPOISK_ID' => $item['KINOPOISK_ID'],
             'IMDB_ID' => $item['IMDB_ID'],
             'SHIKIMORI_ID' => $item['SHIKIMORI_ID'],
@@ -689,8 +700,8 @@ class Import
 
         foreach ($this->iblocks as $type => $id) {
 
-            // Убираем все что не ANIME, EPISODES и PERSONS
-            if (!in_array($type, ['ANIME', 'EPISODES', 'PERSONS'])) {
+            // Убираем все что не ANIME, EPISODES и PEOPLE
+            if (!in_array($type, ['ANIME', 'EPISODES', 'PEOPLE'])) {
                 $entity = ElementTable::getEntity();
                 $query = new Query($entity);
                 $query
@@ -818,7 +829,7 @@ class Import
         if ($collect = $this->collection[$type][$xml_id]) {
 
             switch ($type) {
-                case 'PERSONS':
+                case 'PEOPLE':
                     self::merge(
                         ['ROLES'],
                         $collect['PROPERTY_VALUES'],
@@ -843,16 +854,29 @@ class Import
         if (empty($data)) return $result;
 
         if (is_array($data)) {
-            $images = [];
             foreach ($data as $link) {
-                $result[] = \CFile::MakeFileArray($link);
+                $result[] = self::getFileArray($link);
             }
-            return $images;
         } else {
-            $result = \CFile::MakeFileArray($data);
+            $fileArray = \CFile::MakeFileArray($data);
+            if (self::checkFileType($fileArray['type'])) {
+                $result = $fileArray;
+            }
         }
 
         return $result;
+    }
+
+    protected static function checkFileType(string $type = ''): bool
+    {
+        if (empty($type)) return false;
+
+        $type = explode('/', $type);
+        $type = end($type);
+
+        if (in_array($type, self::$imageTypes)) return true;
+
+        return false;
     }
 
     protected static function getDate($date)

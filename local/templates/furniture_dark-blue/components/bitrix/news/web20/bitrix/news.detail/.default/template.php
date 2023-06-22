@@ -129,7 +129,7 @@ CJSCore::Init(array("jquery"));
         <div><b>Выберите озвучку: </b></div>
         <div class="translation-list">
         <?
-            $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
+        $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
             'filter' => [
                 'SERIAL_XML_ID' => $arResult['XML_ID'],
                 'ACTIVE' => 'Y',
@@ -149,6 +149,8 @@ CJSCore::Init(array("jquery"));
 
         $translations = array_unique($translations);
 
+
+
         $translationsDB = CIBlockElement::GetList([],[
             'XML_ID' => $translations
         ],false,false, ['NAME', 'XML_ID', 'PROPERTY_TYPE']);
@@ -161,6 +163,8 @@ CJSCore::Init(array("jquery"));
                 'TYPE' => $translation['PROPERTY_TYPE_VALUE'],
             ];
         }
+
+
 
         $result = [];
         foreach ($episodes as $episode) {
@@ -177,11 +181,12 @@ CJSCore::Init(array("jquery"));
                 ];
             }
         }
+
         ?>
 
         <? foreach ($result as $translation => $seasons): ?>
             <div>
-                <? if (is_array($seasons)): ?>
+                <? if (empty($seasons['LINK'])): ?>
                     <h3><?=$translation?></h3>
                     <? foreach ($seasons as $season => $item): ?>
                         <div>
@@ -214,10 +219,14 @@ CJSCore::Init(array("jquery"));
         <br>
         <br>
         <div data-player></div>
+<!--
         <iframe src="//kodik.info/serial/9153/cddf6e92e8e68f202dc7c8cac0c4ed7c/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
         <iframe src="//kodik.info/season/82121/c9b10ebb0eb71f979dbd5518218ab5c3/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
         <iframe src="//kodik.info/seria/1014571/22df9cdc28101f4acf4fb57ac537dcd5/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
+-->
+        <script type="text/javascript">
 
+        </script>
     </div>
 </div>
 
@@ -271,6 +280,19 @@ CJSCore::Init(array("jquery"));
             let height = 720 / 1280 * width;
 
             $('[data-player]').html('<iframe src="'+link+'?hide_selectors=true" width="'+width+'" height="'+height+'" frameborder="0" allowfullscreen=""></iframe>')
+
+            function kodikMessageListener(message) {
+                switch (message.data.key) {
+                    case 'kodik_player_play':
+                        console.log(message);
+                }
+            }
+
+            if (window.addEventListener) {
+                window.addEventListener('message', kodikMessageListener);
+            } else {
+                window.attachEvent('onmessage', kodikMessageListener);
+            }
         });
 
         //$('[data-translation]').on('click', function () {

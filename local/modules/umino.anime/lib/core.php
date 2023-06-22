@@ -131,9 +131,9 @@ class Core
         return (int) COption::GetOptionInt(self::getModuleId(), 'studios_iblock_id');
     }
 
-    public static function getPersonsIBlockID(): int
+    public static function getPeopleIBlockID(): int
     {
-        return (int) COption::GetOptionInt(self::getModuleId(), 'persons_iblock_id');
+        return (int) COption::GetOptionInt(self::getModuleId(), 'people_iblock_id');
     }
 
     public static function getGenresIBlockID(): int

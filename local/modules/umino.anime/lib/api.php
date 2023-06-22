@@ -87,6 +87,7 @@ class API
     public static function getDefaultParams(): array
     {
         return [
+            'with_seasons' => 'true',
             'with_episodes' => 'true',
             'with_material_data' => 'true',
             'token' => Core::getAPIToken(),
@@ -155,7 +156,7 @@ class API
             ]
         );
 
-        $url = Request::buildURL([__FUNCTION__], $params);
+        $url = Request::buildURL([Core::getAPIUrl(),__FUNCTION__], $params);
 
         return self::request($url);
     }
@@ -209,7 +210,7 @@ class API
 
     protected static function getSearchUrl(array $params): string
     {
-        return Request::buildURL(['search'], array_merge(
+        return Request::buildURL([Core::getAPIUrl(),'search'], array_merge(
             $params,
             self::getDefaultParams(),
             ['limit'=>100],
@@ -263,8 +264,9 @@ class API
     private static function getAsyncResponse(array $urls): array
     {
         $request = new Request();
-        $request->addAsyncRequest($urls);
-        $responses = $request->getAsyncResponse();
+        $request->addToAsyncQueue($urls);
+        $request->initAsyncRequest();
+        $responses = $request->getResult();
 
         Core::keysToUpperCase($responses);
 

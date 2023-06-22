@@ -26,6 +26,11 @@ class Request
 
     public array $asyncRequests = [];
 
+    private int $samples = 0;
+    private static int $usleep = 500000;
+
+    private array $result = [];
+
     private static function convertJson(string $json)
     {
         $result = json_decode($json, true);
@@ -45,15 +50,15 @@ class Request
      */
     public static function getResponse(string $url, bool $isJson = true): ?array
     {
-        if ($curl = curl_init($url)) {
-            curl_setopt_array($curl, self::$options);
-            $result = curl_exec($curl);
-            curl_close($curl);
-        } else {
-            $result = file_get_contents($url);
-        }
+        $request = new Request();
 
-        return $isJson ? self::convertJson($result) : $result;
+        $request->addToAsyncQueue([$url], $isJson);
+
+        $request->initAsyncRequest();
+
+        $result = $request->getResult();
+
+        return $result[array_key_first($result)];
     }
 
     /**
@@ -63,11 +68,9 @@ class Request
      */
     public static function buildURL(array $components, array $params = []): string
     {
-        $components = array_merge([Core::getAPIUrl()], $components);
-
         foreach ($components as &$component) {
             if (!is_array($component)) continue;
-            $component = self::buildURL($component);
+            $component = static::buildURL($component);
         }
 
         $result = preg_replace('/^http[a-z]{0,1}[:]{1}[\/]{1,}/', '', implode('/', $components));
@@ -84,7 +87,7 @@ class Request
         return 'https://' . str_replace('//', '/', $result);
     }
 
-    public function addAsyncRequest(array $urls, bool $isJson = true)
+    public function addToAsyncQueue(array $urls, bool $isJson = true)
     {
         foreach ($urls as $key => $url) {
             $this->asyncRequests[$key] = [
@@ -94,20 +97,22 @@ class Request
         }
     }
 
-    public function getAsyncResponse(): array
+    public function initAsyncRequest(int $level = 20)
     {
-        $result = [];
+        if (empty($this->asyncRequests)) return;
 
-        $this->asyncRequests = array_chunk($this->asyncRequests, 20, true);
+        $asyncRequests = array_chunk($this->asyncRequests, $level, true);
 
-        foreach ($this->asyncRequests as $asyncRequestChunk) {
+        $empty = true;
+
+        foreach ($asyncRequests as $asyncRequestChunk) {
 
             $curls = curl_multi_init();
 
             foreach ($asyncRequestChunk as &$asyncRequest) {
-                $ch = self::getHandle($asyncRequest['URL']);
-                $asyncRequest['CH'] = $ch;
-                curl_multi_add_handle($curls, $ch);
+                $resource = static::getHandle($asyncRequest['URL']);
+                $asyncRequest['RESOURCE'] = $resource;
+                curl_multi_add_handle($curls, $resource);
             } unset($asyncRequest);
 
             do {
@@ -117,33 +122,47 @@ class Request
 
             foreach ($asyncRequestChunk as $key => $asyncRequest) {
 
-                $code = curl_getinfo($asyncRequest['CH'], CURLINFO_HTTP_CODE);
-                $response = curl_multi_getcontent($asyncRequest['CH']);
+                $code = curl_getinfo($asyncRequest['RESOURCE'], CURLINFO_HTTP_CODE);
+                $response = curl_multi_getcontent($asyncRequest['RESOURCE']);
 
-                if ($code != 200) {
+                if ($code == 200) {
+                    $empty = false;
+                    unset($this->asyncRequests[$key]);
+                    $this->result[$key] = $asyncRequest['JSON'] && !empty($response) ? static::convertJson($response) : $response;
+                } else if (!in_array($code, [429])) {
+                    unset($this->asyncRequests[$key]);
                     Logger::log([
                         'URL' => $asyncRequest['URL'],
                         'CODE' => $code,
-                        'RESPONSE' => self::convertJson($response),
+                        'RESPONSE' => static::convertJson($response),
                     ]);
                 }
 
-                $result[$key] = $asyncRequest['JSON'] && !empty($response) ? self::convertJson($response) : $response;
-                curl_multi_remove_handle($curls, $asyncRequest['CH']);
+                curl_multi_remove_handle($curls, $asyncRequest['RESOURCE']);
             }
 
             curl_multi_close($curls);
-
         }
 
-        return $result;
+        if ($this->asyncRequests && $this->samples < 5) {
+            if ($empty) $this->samples++;
+            usleep(self::$usleep);
+            $this->initAsyncRequest($level);
+        }
     }
 
     private function getHandle(string $url)
     {
         $ch = curl_init();
-        curl_setopt_array($ch, self::$options);
+        curl_setopt_array($ch, static::$options);
         curl_setopt($ch, CURLOPT_URL, $url);
         return $ch;
+    }
+
+    public function getResult(): array
+    {
+        $result = $this->result;
+        $this->result = [];
+        return $result;
     }
 }

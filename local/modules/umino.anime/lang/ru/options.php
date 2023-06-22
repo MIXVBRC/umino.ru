@@ -23,7 +23,7 @@ $MESS['UMINO_ANIME_OPTIONS_API_NOTE_4']             = 'Последняя дат
 $MESS['UMINO_ANIME_OPTIONS_FILLING_ANIME_IBLOCK_ID']        = 'Инфоблок для сериалов';
 $MESS['UMINO_ANIME_OPTIONS_FILLING_TRANSLATIONS_IBLOCK_ID'] = 'Инфоблок для студий переводов';
 $MESS['UMINO_ANIME_OPTIONS_FILLING_STUDIOS_IBLOCK_ID']      = 'Инфоблок для студий';
-$MESS['UMINO_ANIME_OPTIONS_FILLING_PERSONS_IBLOCK_ID']      = 'Инфоблок для персон';
+$MESS['UMINO_ANIME_OPTIONS_FILLING_PEOPLE_IBLOCK_ID']      = 'Инфоблок для персон';
 $MESS['UMINO_ANIME_OPTIONS_FILLING_GENRES_IBLOCK_ID']       = 'Инфоблок для жанров';
 
 $MESS['UMINO_ANIME_OPTIONS_LOGS_SHOW_COUNT']  = 'Сколько логов выводить';

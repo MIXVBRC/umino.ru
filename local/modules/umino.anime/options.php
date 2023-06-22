@@ -200,10 +200,10 @@ $options = [
             $iblocks
         ]
     ],
-    'persons_iblock_id' => [
-        'persons_iblock_id',
-        Loc::getMessage('UMINO_ANIME_OPTIONS_FILLING_PERSONS_IBLOCK_ID'),
-        Core::getIblockId('persons'),
+    'people_iblock_id' => [
+        'people_iblock_id',
+        Loc::getMessage('UMINO_ANIME_OPTIONS_FILLING_PEOPLE_IBLOCK_ID'),
+        Core::getIblockId('people'),
         [
             'selectbox',
             $iblocks
@@ -346,7 +346,13 @@ if ($request->isPost() && check_bitrix_sessid()) {
                     }
                 }
 
-                if (in_array($arOption[0], ['api_fill', 'api_save_next_page', 'api_full_import', 'api_date_update_import'])) {
+                if (in_array($arOption[0], [
+                    'api_fill',
+                    'api_save_next_page',
+                    'api_full_import',
+                    'api_date_update_import',
+                    'api_shikimori_import'
+                ])) {
                     $optionValue = $optionValue? : 'N';
                 }
 
