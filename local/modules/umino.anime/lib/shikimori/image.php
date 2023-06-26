@@ -4,49 +4,26 @@
 namespace Umino\Anime\Shikimori;
 
 
-class Image
+class Image extends Entity
 {
-    private string $url = '';
+    protected static bool $md5Id = true;
 
-    public function __construct(string $url)
+    protected function rebase(array $fields): array
     {
-        $this->url = self::rebase($url);
-
-        return $this;
+        return [
+            'XML_ID' => $this->getId(),
+            'URL' => Request::buildFileURL([$fields['URL']]),
+        ];
     }
 
-    public function getFileArray(): array
+    public function getArray(): array
     {
-        return \CFile::GetFileArray($this->url);
+        $fields = static::getFields();
+        return \CFile::MakeFileArray($fields['URL']);
     }
 
-    private static function rebase($fields)
+    protected static function load(): array
     {
-        if (is_array($fields)) {
-            $result = Request::buildURL([$fields['ORIGINAL']]);
-        } else {
-            $result = Request::buildURL([$fields]);
-        }
-
-        return $result;
+        return [];
     }
-
-    public static function getCollection(array $urls): array
-    {
-        $result = [];
-
-        foreach ($urls as $url) {
-            if (empty($url)) continue;
-            if (is_array($url)) {
-                $result[] = new Image($url['ORIGINAL']);
-            } else {
-                $result[] = new Image($url);
-            }
-
-        }
-
-        return $result;
-    }
-
-
 }

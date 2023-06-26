@@ -4,49 +4,104 @@
 namespace Umino\Anime\Shikimori;
 
 
+use CUtil;
+
 class Entity
 {
     public static array $data = [];
     protected static array $loads = [];
 
-    protected int $id;
+    protected static bool $md5Id = false;
+
+    protected string $id;
+    protected string $xmlId;
     protected array $fields = [];
 
-    public function __construct(int $id, array $fields = [])
+    public function __construct(string $id, array $fields = [])
     {
         $this->setId($id);
+        $this->setXmlId(static::buildXmlId($id, static::getName()));
+        if (empty($fields)) {
+            static::addLoad($this->getId());
+            $fields = static::load()[$this->getId()] ?: [];
+        }
+        $fields = $this->rebase($fields);
+
         $this->setFields($fields);
         $this->addData();
-        return $this;
     }
 
-    protected function setId(int $id)
+    public static function create(string $id, array $fields = []): object
+    {
+        $id = static::buildId($id);
+
+        if ($object = static::getById($id)) {
+            return $object;
+        } else {
+            return new static($id, $fields);
+        }
+    }
+
+    protected function setId(string $id)
     {
         $this->id = $id;
     }
 
-    protected function getId(): int
+    protected function getId(): string
     {
         return $this->id;
     }
 
-    protected static function addToLoad(int $id)
+    protected function setXmlId(string $xmlId)
+    {
+        $this->xmlId = $xmlId;
+    }
+
+    protected function getXmlId(): string
+    {
+        return $this->xmlId;
+    }
+
+    protected static function addLoad(string $id)
     {
         static::$loads[$id] = static::getUrl([$id]);
     }
 
     protected static function load(): array
     {
+        $result = static::loadFromDataBase();
+        if (static::$loads) {
+            $result += static::loadFromRequest();
+        }
+        static::$loads = [];
+        return $result;
+    }
+
+    protected static function loadFromDataBase(): array
+    {
+        $result = [];
+        foreach (array_keys($result) as $id) {
+            unset(static::$loads[$id]);
+        }
+        return $result;
+    }
+
+    protected static function loadFromRequest(): array
+    {
         $request = new Request();
         $request->addToAsyncQueue(self::$loads);
         $request->initAsyncRequest();
+        $result = $request->getResult();
+        foreach (array_keys($result) as $id) {
+            unset(static::$loads[$id]);
+        }
         static::$loads = [];
-        return $request->getResult();
+        return $result;
     }
 
     protected static function getUrl(array $additional = []): string
     {
-        return Request::buildURL(array_merge([static::getName()], $additional));
+        return Request::buildApiURL(array_merge([static::getName()], $additional));
     }
 
     protected static function getClass(): string
@@ -65,6 +120,11 @@ class Entity
         return $this->fields;
     }
 
+    protected function setFields(array $fields)
+    {
+        $this->fields = $fields;
+    }
+
     protected function rebase(array $fields): array
     {
         return $fields;
@@ -75,37 +135,89 @@ class Entity
         static::$data[get_called_class()][$this->id] = $this;
     }
 
-    public static function getById(int $id): ?object
+    protected static function rearrange(array $array): array
+    {
+        $result = [];
+
+        foreach ($array as $item) {
+            if (is_array($item)) {
+                $result[] += static::rearrange($item);
+            } else {
+                $result[] = $item;
+            }
+        }
+
+        return $result;
+    }
+
+    protected static function buildId(...$params): string
+    {
+        $result = static::rearrange($params);
+
+        $result = implode('', $result);
+
+        if (static::$md5Id) return md5($result);
+
+        return $result;
+    }
+
+    protected static function buildXmlId(...$params): string
+    {
+        $result = static::rearrange($params);
+
+        $result = implode('', $result);
+
+        return md5($result);
+    }
+
+    protected static function buildCode(...$params): string
+    {
+        $result = static::rearrange($params);
+
+        $result = implode('-', $result);
+
+        return Cutil::translit(
+            $result,
+            'ru',
+            [
+                'max_len' => 255,
+                'change_case' => 'L',
+                'replace_space' => '-',
+                'replace_other' => '-',
+                'delete_repeat_replace ' => true,
+                'safe_chars' => '',
+            ]
+        );
+    }
+
+    public static function getById(string $id): ?object
     {
         return static::$data[get_called_class()][$id];
     }
 
-    protected function setFields(array $fields)
-    {
-        if (empty($fields)) {
-            static::addToLoad($this->getId());
-            $fields = static::load()[$this->getId()];
-        }
-        $this->fields = $this->rebase($fields);
-    }
-
-    public static function getCollection(array $ids): array
+    public static function getByIds(array $ids): array
     {
         $result = [];
+        $map = [];
 
-        foreach ($ids as $id) {
+        foreach ($ids as $key => $id) {
             if ($object = static::getById($id)) {
-                $result[$id] = $object;
+                $result[$key] = $object;
             } else {
-                static::addToLoad($id);
+                static::addLoad($id);
+                $map[$key] = $id;
             }
         }
 
-        $class = static::getClass();
         foreach (static::load() as $id => $fields) {
-            $result[$id] = new $class((int) $id, $fields);
+            $result[array_search($id, $map)] = static::create($id, $fields);
         }
-
+        ksort($result);
         return $result;
+    }
+
+    public static function getData():array
+    {
+        return self::$data;
     }
 }

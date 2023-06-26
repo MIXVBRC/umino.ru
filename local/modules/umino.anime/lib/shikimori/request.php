@@ -11,9 +11,15 @@ class Request extends \Umino\Anime\Request
     private static string $url = 'https://shikimori.one';
     private static string $api = '/api';
 
-    public static function buildURL(array $components, array $params = []): string
+    public static function buildApiURL(array $components, array $params = []): string
     {
         $components = array_merge([self::$url, self::$api], $components);
+        return parent::buildURL($components, $params);
+    }
+
+    public static function buildFileURL(array $components, array $params = []): string
+    {
+        $components = array_merge([self::$url], $components);
         return parent::buildURL($components, $params);
     }
 

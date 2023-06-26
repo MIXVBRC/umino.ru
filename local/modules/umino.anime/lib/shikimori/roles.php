@@ -3,87 +3,59 @@
 
 namespace Umino\Anime\Shikimori;
 
-// TODO: доделать
-class Roles extends Genres
+
+class Roles extends Entity
 {
+    protected static bool $md5Id = true;
+
     protected function rebase(array $fields): array
     {
-        return [
-            'NAME' => $fields['ROLES_RUSSIAN'] ?: $fields['ROLES'],
-            'NAME_ORIGIN' => $fields['ROLES'],
-            'ENTITY' => $fields['ENTITY'],
-        ];
+        $objects = [];
+
+        foreach ($fields as $key => $values) {
+
+            if (empty($values['CHARACTER'])) {
+                $class = People::getClass();
+                $id = $values['PERSON']['ID'];
+            } else {
+                $class = Characters::getClass();
+                $id = $values['CHARACTER']['ID'];
+            }
+
+            $objects[$class][$key] = $id;
+
+            unset($fields[$key]['CHARACTER'], $fields[$key]['PERSON']);
+        }
+
+        /** @var People|Characters $class */
+        foreach ($objects as $class => $ids) {
+            $results = $class::getByIds($ids);
+            foreach ($results as $key => $result) {
+                $fields[$key]['ENTITY'] = $result;
+            }
+        }
+
+        $result = [];
+
+        foreach ($fields as $values) {
+            /** @var People|Characters $object */
+            $object = $values['ENTITY'];
+
+            foreach ($values['ROLES'] as $key => $role) {
+                $id = static::buildId($role, $object->getId());
+                $result[$id] = Role::create($id, [
+                    'NAME' => $values['ROLES_RUSSIAN'][$key] ?: $role,
+                    'NAME_ORIGIN' => $role,
+                    'ENTITY' => $object,
+                ]);
+            }
+        }
+
+        return $result;
     }
 
-//    protected static function load(int $id): array
-//    {
-//        if (empty(self::$collection)) {
-//            $results = Request::getResponse(self::getUrl());
-//            foreach ($results as $result) {
-//                self::$collection[$result['ID']] = $result;
-//            }
-//        }
-//
-//        return self::$collection[$id];
-//    }
-
-//    public static function getCollection(array $ids): array
-//    {
-//        $result = [];
-//
-//        $entity = [];
-//
-//        foreach ($roles as $role) {
-//            if ($role['PERSON']) {
-//                $entity['PERSONS'][] = $role['PERSON']['ID'];
-//            }
-//            if ($role['CHARACTER']) {
-//                $entity['CHARACTERS'][] = $role['CHARACTER']['ID'];
-//            }
-//        }
-//
-//        $entity['PERSONS'] = People::getCollection($entity['PERSONS']);
-//        $entity['CHARACTERS'] = Characters::getCollection($entity['CHARACTERS']);
-//
-//        foreach ($roles as $role) {
-//
-//            if (empty($role)) continue;
-//
-//            if ($role['CHARACTER']['ID']) {
-//                $role['ENTITY'] = $entity['CHARACTERS'][$role['CHARACTER']['ID']];
-//            } else if ($role['PERSON']['ID']) {
-//                $role['ENTITY'] = $entity['PERSONS'][$role['PERSON']['ID']];
-//            } else {
-//                continue;
-//            }
-//
-//            unset($role['CHARACTER']);
-//            unset($role['PERSON']);
-//
-//            $result[] = new Role($role);
-//        }
-//
-//        return $result;
-//    }
-
-//    public static function getCollection(array $data): array
-//    {
-//        $result = [];
-//        $collection = [];
-//
-//        foreach ($data as $id) {
-//            if ($object = self::getById($id)) {
-//                $result[$id] = $object;
-//            } else {
-//                $collection[$id] = self::load($id);
-//            }
-//        }
-//
-//        $class = self::getClass();
-//        foreach ($collection as $id => $fields) {
-//            $result[$id] = new $class((int) $id, $fields);
-//        }
-//
-//        return $result;
-//    }
+    protected static function getUrl(array $additional = []): string
+    {
+        return Request::buildApiURL(array_merge([Animes::getName()], $additional, [static::getName()]));
+    }
 }

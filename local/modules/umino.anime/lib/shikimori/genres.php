@@ -11,13 +11,16 @@ class Genres extends Entity
     protected function rebase(array $fields): array
     {
         return [
-            'ID' => $fields['ID'],
+            'XML_ID' => $this->getXmlId(),
+            'CODE' => static::buildCode($this->getId(), $fields['RUSSIAN'] ?: $fields['NAME']),
             'NAME' => $fields['RUSSIAN'] ?: $fields['NAME'],
-            'NAME_ORIGIN' => $fields['NAME'],
+            'PROPERTY_VALUES' => [
+                'NAME_ORIGIN' => $fields['NAME'],
+            ],
         ];
     }
 
-    protected static function addToLoad(int $id)
+    protected static function addLoad(string $id)
     {
         static::$loads[$id] = static::getUrl();
     }
@@ -27,54 +30,35 @@ class Genres extends Entity
         $result = [];
 
         $loadKeys = array_keys(static::$loads);
-        $collectionKeys = array_keys(static::$collection);
+        $collectionKeys = array_keys(static::getCollection());
 
         if (array_diff($loadKeys, $collectionKeys)) {
+
             $request = new Request();
             $request->addToAsyncQueue([static::getUrl()]);
             $request->initAsyncRequest();
             $response = $request->getResult();
 
             foreach (end($response) as $item) {
-                static::$collection[$item['ID']] = $item;
+                static::addCollection($item);
             }
         }
 
         foreach ($loadKeys as $id) {
-            $result[$id] = static::$collection[$id];
+            $result[$id] = static::getCollection()[$id];
         }
 
         static::$loads = [];
         return $result;
     }
 
-    protected function setFields(array $fields)
+    protected static function getCollection(): array
     {
-        if (empty($fields)) {
-            static::addToLoad($this->getId());
-            $fields = static::load()[$this->getId()];
-        }
-        $this->fields = $this->rebase($fields);
+        return static::$collection;
     }
 
-//    public static function getCollection(array $ids): array
-//    {
-//        $result = [];
-//        $collection = [];
-//
-//        foreach ($ids as $id) {
-//            if ($object = self::getById($id)) {
-//                $result[$id] = $object;
-//            } else {
-//                $collection[$id] = self::load($id);
-//            }
-//        }
-//
-//        $class = self::getClass();
-//        foreach ($collection as $id => $fields) {
-//            $result[$id] = new $class((int) $id, $fields);
-//        }
-//
-//        return $result;
-//    }
+    protected static function addCollection(array $fields)
+    {
+        static::$collection[$fields['ID']] = $fields;
+    }
 }

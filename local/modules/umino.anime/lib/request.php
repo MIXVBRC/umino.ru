@@ -27,7 +27,8 @@ class Request
     public array $asyncRequests = [];
 
     private int $samples = 0;
-    private static int $usleep = 500000;
+    private static int $maxSamples = 5;
+    private static float $sleep = 5.0;
 
     private array $result = [];
 
@@ -123,19 +124,31 @@ class Request
             foreach ($asyncRequestChunk as $key => $asyncRequest) {
 
                 $code = curl_getinfo($asyncRequest['RESOURCE'], CURLINFO_HTTP_CODE);
-                $response = curl_multi_getcontent($asyncRequest['RESOURCE']);
 
-                if ($code == 200) {
-                    $empty = false;
-                    unset($this->asyncRequests[$key]);
-                    $this->result[$key] = $asyncRequest['JSON'] && !empty($response) ? static::convertJson($response) : $response;
-                } else if (!in_array($code, [429])) {
-                    unset($this->asyncRequests[$key]);
-                    Logger::log([
-                        'URL' => $asyncRequest['URL'],
-                        'CODE' => $code,
-                        'RESPONSE' => static::convertJson($response),
-                    ]);
+                switch ($code) {
+
+                    case 200:
+                        unset($this->asyncRequests[$key]);
+                        $empty = false;
+                        $response = curl_multi_getcontent($asyncRequest['RESOURCE']);
+                        $this->result[$key] = $asyncRequest['JSON'] && !empty($response) ? static::convertJson($response) : $response;
+                        break;
+
+                    case 404:
+                        unset($this->asyncRequests[$key]);
+                        $this->result[$key] = [];
+                        break;
+
+                    case 429:
+                        break;
+
+                    default:
+                        unset($this->asyncRequests[$key]);
+                        Logger::log([
+                            'URL' => $asyncRequest['URL'],
+                            'CODE' => $code,
+                        ]);
+                        break;
                 }
 
                 curl_multi_remove_handle($curls, $asyncRequest['RESOURCE']);
@@ -144,10 +157,18 @@ class Request
             curl_multi_close($curls);
         }
 
-        if ($this->asyncRequests && $this->samples < 5) {
+        if ($this->asyncRequests && $this->samples < static::$maxSamples) {
             if ($empty) $this->samples++;
-            usleep(self::$usleep);
+            usleep(static::$sleep * 1000 * 1000);
             $this->initAsyncRequest($level);
+        } else if ($this->samples >= static::$maxSamples) {
+            Logger::log([
+                'URLS' => array_column($this->asyncRequests, 'URL'),
+                'MESSAGE' => [
+                    'The attempts are over!',
+                    'Increase the timeout (now '.static::$sleep.' sec) or maximum number of retries (now max '.static::$maxSamples.' samples).',
+                ],
+            ]);
         }
     }
 
@@ -162,6 +183,7 @@ class Request
     public function getResult(): array
     {
         $result = $this->result;
+        ksort($result);
         $this->result = [];
         return $result;
     }

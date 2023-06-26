@@ -4,7 +4,7 @@
 namespace Umino\Anime\Shikimori;
 
 
-class Publishers extends Genres
+class Role extends Entity
 {
     protected function rebase(array $fields): array
     {
@@ -12,6 +12,15 @@ class Publishers extends Genres
             'XML_ID' => $this->getXmlId(),
             'CODE' => static::buildCode($this->getId(), $fields['NAME']),
             'NAME' => $fields['NAME'],
+            'PROPERTY_VALUES' => [
+                'NAME_ORIGIN' => $fields['NAME_ORIGIN'],
+                'ENTITY' => $fields['ENTITY'],
+            ],
         ];
+    }
+
+    protected static function loadFromRequest(): array
+    {
+        return [];
     }
 }

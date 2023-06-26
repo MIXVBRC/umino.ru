@@ -4,36 +4,28 @@
 namespace Umino\Anime\Shikimori;
 
 
+use CFile;
+
+
 class Video extends Entity
 {
-    public function __construct(array $fields)
-    {
-        $this->fields = self::rebase($fields);
-
-        return $this;
-    }
-
-    private static function rebase(array $fields): array
+    protected function rebase(array $fields): array
     {
         return [
-            'ID' => $fields['ID'],
+            'XML_ID' => $this->getXmlId(),
+            'CODE' => static::buildCode($this->getId(), $fields['NAME']),
             'NAME' => $fields['NAME'],
-            'URL' => $fields['URL'],
-            'IMAGE_URL' => $fields['IMAGE_URL'],
-            'TYPE' => $fields['KIND'],
-            'HOSTING' => $fields['HOSTING'],
+            'DETAIL_PICTURE' => CFile::MakeFileArray($fields['IMAGE_URL']),
+            'PROPERTY_VALUES' => [
+                'URL' => $fields['URL'],
+                'TYPE' => $fields['KIND'],
+                'HOSTING' => $fields['HOSTING'],
+            ],
         ];
     }
 
-    public static function getCollection(array $videos): array
+    protected static function loadFromRequest(): array
     {
-        $result = [];
-
-        foreach ($videos as $video) {
-            if (empty($video)) continue;
-            $result[] = new Video($video);
-        }
-
-        return $result;
+        return [];
     }
 }
