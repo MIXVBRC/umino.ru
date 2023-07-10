@@ -6,11 +6,9 @@ namespace Umino\Anime\Shikimori;
 
 class People extends Entity
 {
-    protected function rebase(array $fields): array
+    protected static function rebase(array $fields): array
     {
         return [
-            'XML_ID' => $this->getXmlId(),
-            'CODE' => static::buildCode($this->getId(), $fields['RUSSIAN'] ?: $fields['NAME']),
             'NAME' => $fields['RUSSIAN'] ?: $fields['NAME'],
             'DETAIL_PICTURE' => Request::buildFileURL([$fields['IMAGE']['ORIGINAL']]),
             'PROPERTY_VALUES' => [

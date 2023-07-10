@@ -23,6 +23,9 @@ if (!$lock->lock()) die;
 
 try {
 
+    \Umino\Anime\Shikimori\Manager::load(30);
+
+    /*
     // Полный импорт
     if (Core::getAPIFullImport()) {
         $result = Core::getAPISaveNextPage() ? API::next() : [];
@@ -38,6 +41,7 @@ try {
             $import->start($result);
         }
     }
+    */
 
     /*
     // Получение отсутствующих эпизодов для сериалов

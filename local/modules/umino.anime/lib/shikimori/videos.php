@@ -4,21 +4,22 @@
 namespace Umino\Anime\Shikimori;
 
 
+use CFile;
+
+
 class Videos extends Entity
 {
-    protected function rebase(array $fields): array
+    protected static function rebase(array $fields): array
     {
-        $result = [];
-
-        foreach ($fields as $item) {
-            $item = Video::create($item['ID'], $item);
-            $result[] = [
-                'ID' => $item->getId(),
-                'VIDEO' => $item,
-            ];
-        }
-
-        return $result;
+        return [
+            'NAME' => $fields['NAME'],
+            'DETAIL_PICTURE' => CFile::MakeFileArray($fields['IMAGE_URL']),
+            'PROPERTY_VALUES' => [
+                'URL' => $fields['URL'],
+                'TYPE' => $fields['KIND'],
+                'HOSTING' => $fields['HOSTING'],
+            ],
+        ];
     }
 
     protected static function getUrl(array $additional = []): string

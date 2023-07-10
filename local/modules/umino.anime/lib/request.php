@@ -6,6 +6,8 @@ namespace Umino\Anime;
 
 class Request
 {
+    protected static array $cache = [];
+
     protected static array $options = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_SSL_VERIFYPEER => false,
@@ -51,6 +53,12 @@ class Request
      */
     public static function getResponse(string $url, bool $isJson = true): ?array
     {
+        $cacheKey = md5(serialize([$url,$isJson]));
+
+        $result = static::$cache[$cacheKey];
+
+        if (isset($result)) return $result;
+
         $request = new Request();
 
         $request->addToAsyncQueue([$url], $isJson);
@@ -59,7 +67,49 @@ class Request
 
         $result = $request->getResult();
 
-        return $result[array_key_first($result)];
+        $result = $result[array_key_first($result)];
+
+        return static::$cache[$cacheKey] = $result;
+    }
+
+    /**
+     * @param array $urls
+     * @param bool $isJson
+     * @return array
+     */
+    public static function getResponseAsync(array $urls, bool $isJson = true): array
+    {
+        $result = [];
+
+        foreach ($urls as $key => $url)
+        {
+            $cacheKey = md5(serialize([$url,$isJson]));
+
+            $cacheResult = static::$cache[$cacheKey];
+
+            if (!isset($cacheResult)) continue;
+
+            $result[$key] = $cacheResult;
+
+            unset($urls[$key]);
+        }
+
+        $request = new Request();
+
+        $request->addToAsyncQueue($urls, $isJson);
+
+        $request->initAsyncRequest();
+
+        $requestResults = $request->getResult();
+
+        foreach ($urls as $key => $url)
+        {
+            $cacheKey = md5(serialize([$url,$isJson]));
+
+            $result[$key] = static::$cache[$cacheKey] = $requestResults[$key];
+        }
+
+        return $result;
     }
 
     /**

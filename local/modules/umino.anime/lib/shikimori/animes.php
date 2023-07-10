@@ -6,42 +6,48 @@ namespace Umino\Anime\Shikimori;
 
 class Animes extends Entity
 {
-    protected function rebase(array $fields): array
+    protected static int $maxScreenshots = 5;
+
+    protected static function rebase(array $fields): array
     {
-        foreach ($fields['VIDEOS'] as &$item) {
-            $item = Video::create($item['ID'], $item)->getXmlId();
-        }
+//        $fields['VIDEOS'] = Videos::creates([$fields['ID'] => array_column($fields['VIDEOS'], 'ID')]);
+//        pre($fields['VIDEOS']);die;
+//        /** @var Videos $item */
+//        foreach ($fields['VIDEOS'] as &$item) {
+//            $item = $item->getXmlId();
+//        }
 
-//        $fields['SCREENSHOTS'] = Screenshots::create($fields['ID']);
+//        $fields['SCREENSHOTS'] = array_splice(Screenshots::create($fields['ID'])->getFields(), 0, static::$maxScreenshots);
+//        foreach ($fields['SCREENSHOTS'] as &$screenshot) {
+//            $screenshot = $screenshot->getFields()['URL'];
+//        }
 
-        $fields['GENRES'] = Genres::getByIds(array_column($fields['GENRES'], 'ID'));
-        /** @var Genres $item */
-        foreach ($fields['GENRES'] as &$item) {
-            $item = $item->getXmlId();
-        }
+//        $fields['GENRES'] = Genres::creates(array_column($fields['GENRES'], 'ID'));
+//        /** @var Genres $item */
+//        foreach ($fields['GENRES'] as &$item) {
+//            $item = $item->getXmlId();
+//        }
 
-        $fields['STUDIOS'] = Studios::getByIds(array_column($fields['STUDIOS'], 'ID'));
+        $fields['STUDIOS'] = Studios::creates(array_column($fields['STUDIOS'], 'ID'));
         /** @var Studios $item */
         foreach ($fields['STUDIOS'] as &$item) {
             $item = $item->getXmlId();
         }
 
-//        $fields['ROLES'] = Roles::create($fields['ID']);
+//        $fields['ROLES'] = Roles::creates([$fields['ID']]);
 //        /** @var Studios $item */
 //        foreach ($fields['ROLES'] as &$item) {
 //            $item = $item->getXmlId();
 //        }
 
         return [
-            'XML_ID' => $this->getXmlId(),
-            'CODE' => static::buildCode($this->getId(), $fields['RUSSIAN'] ?: $fields['NAME']),
             'NAME' => $fields['RUSSIAN'] ?: $fields['NAME'],
-            'DETAIL_PICTURE' => Image::create($fields['IMAGE']['ORIGINAL']),
+            'DETAIL_PICTURE' => Request::buildFileURL([$fields['IMAGE']['ORIGINAL']]),
             'DETAIL_TEXT' => strip_tags($fields['DESCRIPTION_HTML']),
             'PROPERTY_VALUES' => [
                 'NAME_ORIGIN' => $fields['NAME'],
                 'NAME_OTHER' => array_merge(
-                    $fields['LICENSE_NAME_RU'],
+                    [$fields['LICENSE_NAME_RU']],
                     $fields['ENGLISH'],
                     $fields['SYNONYMS'],
                     $fields['JAPANESE'],
@@ -64,5 +70,10 @@ class Animes extends Entity
                 'ROLES' => $fields['ROLES'],
             ]
         ];
+    }
+
+    protected static function getRoles()
+    {
+
     }
 }

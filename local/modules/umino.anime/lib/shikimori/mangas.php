@@ -6,11 +6,9 @@ namespace Umino\Anime\Shikimori;
 
 class Mangas extends Entity
 {
-    protected function rebase(array $fields): array
+    protected static function rebase(array $fields): array
     {
         return [
-            'XML_ID' => $this->getXmlId(),
-            'CODE' => static::buildCode($this->getId(), $fields['RUSSIAN'] ?: $fields['NAME']),
             'NAME' => $fields['RUSSIAN'] ?: $fields['NAME'],
             'DETAIL_PICTURE' => Request::buildFileURL([$fields['IMAGE']['ORIGINAL']]),
             'DETAIL_TEXT' => strip_tags($fields['DESCRIPTION_HTML']),
@@ -30,8 +28,8 @@ class Mangas extends Entity
                 'AIRED_ON' => $fields['AIRED_ON'],
                 'RELEASED_ON' => $fields['RELEASED_ON'],
                 'LICENSORS' => $fields['LICENSORS'],
-                'GENRES' => Genres::getByIds(array_column($fields['GENRES'], 'ID')),
-                'PUBLISHERS' => Publishers::getByIds(array_column($fields['PUBLISHERS'], 'ID')),
+                'GENRES' => Genres::creates(array_column($fields['GENRES'], 'ID')),
+                'PUBLISHERS' => Publishers::creates(array_column($fields['PUBLISHERS'], 'ID')),
             ],
         ];
     }

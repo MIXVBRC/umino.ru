@@ -6,13 +6,9 @@ namespace Umino\Anime\Shikimori;
 
 class Genres extends Entity
 {
-    protected static array $collection = [];
-
-    protected function rebase(array $fields): array
+    protected static function rebase(array $fields): array
     {
         return [
-            'XML_ID' => $this->getXmlId(),
-            'CODE' => static::buildCode($this->getId(), $fields['RUSSIAN'] ?: $fields['NAME']),
             'NAME' => $fields['RUSSIAN'] ?: $fields['NAME'],
             'PROPERTY_VALUES' => [
                 'NAME_ORIGIN' => $fields['NAME'],
@@ -20,45 +16,61 @@ class Genres extends Entity
         ];
     }
 
-    protected static function addLoad(string $id)
+    protected static function getUrl(array $additional = []): string
     {
-        static::$loads[$id] = static::getUrl();
+        return Request::buildApiURL([static::getName()]);
     }
 
-    protected static function load(): array
+    public static function creates(array $ids): array
     {
         $result = [];
 
-        $loadKeys = array_keys(static::$loads);
-        $collectionKeys = array_keys(static::getCollection());
+        $items = [];
 
-        if (array_diff($loadKeys, $collectionKeys)) {
+        foreach ($ids as $key => $id) {
+            $id = static::buildId($id);
+            $xmlId = static::buildXmlId($id, static::getClass());
 
-            $request = new Request();
-            $request->addToAsyncQueue([static::getUrl()]);
-            $request->initAsyncRequest();
-            $response = $request->getResult();
-
-            foreach (end($response) as $item) {
-                static::addCollection($item);
+            if ($item = static::getById($xmlId)) {
+                $result[$xmlId] = $item;
+                unset($ids[$key]);
+            } else {
+                $items[$id] = $xmlId;
             }
         }
 
-        foreach ($loadKeys as $id) {
-            $result[$id] = static::getCollection()[$id];
+        if ($loads = static::loadFromDataBase($items)) {
+            $result = array_merge($result, $loads);
+            foreach (array_keys($loads) as $xmlId) {
+                unset($items[array_search($xmlId, $items)]);
+            }
         }
 
-        static::$loads = [];
+        if (!empty($items)) {
+
+            static::addLoad([1]);
+            $results = static::load()[1];
+
+            foreach ($results as $item) {
+
+                if (!in_array($item['ID'], array_keys($items))) continue;
+
+                $fields = static::rebase($item);
+
+                $fields['XML_ID'] = static::buildXmlId($item['ID'], static::getClass());
+                $fields['CODE'] = static::buildCode($item['ID'], $fields['NAME']);
+
+                static::saveToDataBase($fields);
+            }
+
+            if ($loads = static::loadFromDataBase($items)) {
+                $result = array_merge($result, $loads);
+                foreach (array_keys($loads) as $xmlId) {
+                    unset($items[array_search($xmlId, $items)]);
+                }
+            }
+        }
+
         return $result;
-    }
-
-    protected static function getCollection(): array
-    {
-        return static::$collection;
-    }
-
-    protected static function addCollection(array $fields)
-    {
-        static::$collection[$fields['ID']] = $fields;
     }
 }

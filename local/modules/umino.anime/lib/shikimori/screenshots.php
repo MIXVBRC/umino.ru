@@ -6,36 +6,47 @@ namespace Umino\Anime\Shikimori;
 
 class Screenshots extends Entity
 {
-    protected function rebase(array $fields): array
+    protected static function rebase(array $fields): array
     {
         $result = [];
 
         foreach ($fields as $item) {
-            $image = Image::create($item['ORIGINAL'], [
-                'URL' => $item['ORIGINAL'],
+            $result[] = Image::create($item['ORIGINAL'], [
+                'URL' => Request::buildFileURL([$item['ORIGINAL']]),
             ]);
-            $result[] = [
-                'ID' => $image->getId(),
-                'IMAGE' => $image,
-            ];
         }
 
         return $result;
     }
 
+    public static function create(string $id, array $fields = []): ?object
+    {
+        $id = static::buildId($id);
+        $xmlId = static::buildXmlId($id, static::getClass());
+
+        if ($fields) {
+
+            return new static($id, $xmlId, $fields);
+
+        } else if ($item = static::getById($id)) {
+
+            return $item;
+
+        } else {
+
+            static::addLoad([$id]);
+            $fields = static::load()[$id];
+            
+            if (empty($fields)) return null;
+
+            $fields = static::rebase($fields);
+
+            return new static($id, $xmlId, $fields);
+        }
+    }
+
     protected static function getUrl(array $additional = []): string
     {
         return Request::buildApiURL(array_merge([Animes::getName()], $additional, [static::getName()]));
-    }
-
-    public function getArrays(): array
-    {
-        $fields = $this->getFields();
-
-        foreach ($fields as &$item) {
-            $item = $item['IMAGE']->getArray();
-        }
-
-        return $fields;
     }
 }

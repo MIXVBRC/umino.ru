@@ -8,18 +8,18 @@ class Image extends Entity
 {
     protected static bool $md5Id = true;
 
-    protected function rebase(array $fields): array
+    public static function create(string $id, array $fields = []): ?object
     {
-        return [
-            'XML_ID' => $this->getId(),
-            'URL' => Request::buildFileURL([$fields['URL']]),
-        ];
-    }
+        $id = static::buildId($id);
+        $xmlId = static::buildXmlId($id, static::getClass());
 
-    public function getArray(): array
-    {
-        $fields = static::getFields();
-        return \CFile::MakeFileArray($fields['URL']);
+        if ($fields) {
+            return new static($id, $xmlId, $fields);
+        } if ($item = static::getById($id)) {
+            return $item;
+        } else {
+            return null;
+        }
     }
 
     protected static function load(): array

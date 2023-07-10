@@ -563,8 +563,8 @@ class Import
         ]);
 
         $fields = [
-            'XML_ID' => self::getXmlId($materialData['TITLE_EN']),
-            'CODE' => self::getCode($materialData['TITLE_EN']),
+            'XML_ID' => self::getXmlId($item['TITLE']),
+            'CODE' => self::getCode($item['TITLE']),
             'NAME' => $item['TITLE'],
             'PREVIEW_TEXT' => $materialData['DESCRIPTION'] ?: $materialData['ANIME_DESCRIPTION'],
             'DETAIL_TEXT' => $materialData['ANIME_DESCRIPTION'] ?: $materialData['DESCRIPTION'],

@@ -1,33 +1,48 @@
 create table if not exists umino_anime_log (
-  ID int(18) not null auto_increment,
-  DATE_CREATE datetime not null default current_timestamp,
-  FILE varchar(255) not null,
-  LINE varchar(255) not null,
-  MESSAGE text not null,
-  primary key (ID));
+    ID int(18) not null auto_increment,
+    DATE_CREATE datetime default current_timestamp,
+    FILE varchar(255) not null,
+    LINE varchar(255) not null,
+    MESSAGE text not null,
+    primary key (ID)
+);
 
-create table if not exists umino_anime_episodes (
-   ID int(18) not null auto_increment,
-   ACTIVE varchar(1),
-   NAME varchar(255) not null,
-   XML_ID varchar(32) not null,
-   SERIAL_XML_ID varchar(32) not null,
-   TRANSLATION_XML_ID varchar(32) not null,
-   SEASON int(18),
-   ANIME_LINK varchar(255),
-   SEASON_LINK varchar(255),
-   EPISODES mediumtext,
-   EPISODES_COUNT int(18),
-   TYPE varchar(255),
-   QUALITY varchar(255),
-   KODIK_TYPE varchar(255),
-   KODIK_ID varchar(255),
-   DATE_CREATE datetime not null default current_timestamp,
-   DATE_UPDATE datetime not null default current_timestamp on update current_timestamp,
-   primary key (ID),
-   index index_xml_id (XML_ID),
-   index index_serial (SERIAL_XML_ID),
-   index index_translation (TRANSLATION_XML_ID));
+# create table if not exists umino_anime_episodes (
+#     ID int(18) not null auto_increment,
+#     ACTIVE varchar(1),
+#     NAME varchar(255) not null,
+#     XML_ID varchar(32) not null,
+#     SERIAL_XML_ID varchar(32) not null,
+#     TRANSLATION_XML_ID varchar(32) not null,
+#     SEASON int(18),
+#     ANIME_LINK varchar(255),
+#     SEASON_LINK varchar(255),
+#     EPISODES mediumtext,
+#     EPISODES_COUNT int(18),
+#     TYPE varchar(255),
+#     QUALITY varchar(255),
+#     KODIK_TYPE varchar(255),
+#     KODIK_ID varchar(255),
+#     DATE_CREATE datetime default current_timestamp,
+#     DATE_UPDATE datetime default current_timestamp on update current_timestamp,
+#     primary key (ID),
+#     index index_xml_id (XML_ID),
+#     index index_serial (SERIAL_XML_ID),
+#     index index_translation (TRANSLATION_XML_ID)
+# );
+
+create table if not exists umino_anime_shikimori_load (
+    ID int(18) not null auto_increment,
+    SID varchar(255) not null,
+    PARENT_SID varchar(255),
+    TYPE varchar(255) not null,
+    PRIORITY int(18) not null default 100,
+    IS_LOAD boolean not null default false,
+    DATE_CREATE datetime default current_timestamp,
+    DATE_UPDATE datetime default current_timestamp on update current_timestamp,
+    primary key (ID),
+    index index_sid (SID)
+);
 
 # create table if not exists umino_anime_result (
 #    ID int(18) not null auto_increment,
