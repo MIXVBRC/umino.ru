@@ -430,7 +430,7 @@ class Entity
                 unset($items[array_search($xmlId, $items)]);
             }
         }
-        
+
         static::addLoad($items);
         $results = static::load();
 

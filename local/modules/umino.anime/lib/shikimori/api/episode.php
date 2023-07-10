@@ -26,7 +26,7 @@ class Episode extends Entity
                 'id' => $object->getId(),
             ];
         }
-        
+
         return API::searchAsync($params);
     }
 }

@@ -36,7 +36,7 @@ class Screenshots extends Entity
 
             static::addLoad([$id]);
             $fields = static::load()[$id];
-            
+
             if (empty($fields)) return null;
 
             $fields = static::rebase($fields);

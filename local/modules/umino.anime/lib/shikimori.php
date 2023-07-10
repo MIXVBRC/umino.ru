@@ -49,6 +49,8 @@ class Shikimori
 
         $this->rebaseRoles($response['ROLES']);
 
+
+
         pre($this->collects);
         pre($this->expand);
     }
@@ -63,21 +65,6 @@ class Shikimori
         $result = Request::getResponse($url);
 
         return current($result)['id'];
-    }
-
-    protected function rebaseRoles(array &$roles)
-    {
-        foreach ($roles as $key => $role) {
-            unset($roles[$key]);
-            if (empty($role['PERSON'])) {
-                $roles['CHARACTERS'][$role['CHARACTER']['ID']] = $role['CHARACTER']['ID'];
-            } else {
-                $roles['PEOPLE'][$role['PERSON']['ID']] = $role['PERSON']['ID'];
-            }
-        }
-
-        $this->addCollect('CHARACTERS', $roles['CHARACTERS']);
-        $this->addCollect('PEOPLE', $roles['PEOPLE']);
     }
 
 
@@ -117,12 +104,7 @@ class Shikimori
         }
     }
 
-    protected function rebaseScreenshots(&$screenshots)
-    {
-        foreach ($screenshots as &$screenshot) {
-            $screenshot = Request::buildURL([self::$url,$screenshot['ORIGINAL']]);
-        }
-    }
+
 
     protected function addCollect(string $type, array $ids)
     {
