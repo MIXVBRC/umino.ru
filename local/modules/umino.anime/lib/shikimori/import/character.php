@@ -12,16 +12,20 @@ class Character extends Entity
     {
         $fields = parent::rebaseFields($fields);
 
+        /** People */
+
         $fields['SEYU'] = array_column($fields['SEYU'], 'ID');
         foreach ($fields['SEYU'] as &$sid) {
             Manager::addLoad(People::getName(), $sid);
-            $sid = self::getXmlId($sid);
+            $sid = self::getXmlId($sid, Manager::getIBCode(People::getName()));
         } unset($sid);
+
+        /** Manga */
 
         $fields['MANGAS'] = array_column($fields['MANGAS'], 'ID');
         foreach ($fields['MANGAS'] as &$sid) {
             Manager::addLoad(Manga::getName(), $sid);
-            $sid = self::getXmlId($sid);
+            $sid = self::getXmlId($sid, Manager::getIBCode(Manga::getName()));
         } unset($sid);
 
         $fields['NAME_EN'] = $fields['NAME'];

@@ -14,22 +14,33 @@ class Manga extends Entity
     {
         $fields = parent::rebaseFields($fields);
 
+        /** Genre */
+
         $fields['GENRES'] = array_column($fields['GENRES'], 'ID');
         foreach ($fields['GENRES'] as &$sid) {
             Manager::addLoad(Genre::getName(), $sid);
-            $sid = self::getXmlId($sid);
+            $sid = self::getXmlId($sid, Manager::getIBCode(Genre::getName()));
         } unset($sid);
+
+        /** Publisher */
 
         $fields['PUBLISHERS'] = array_column($fields['PUBLISHERS'], 'ID');
         foreach ($fields['PUBLISHERS'] as &$sid) {
             Manager::addLoad(Publisher::getName(), $sid);
-            $sid = self::getXmlId($sid);
+            $sid = self::getXmlId($sid, Manager::getIBCode(Publisher::getName()));
         } unset($sid);
+
+        /** Franchise */
+
+        Manager::addLoad(Franchise::getName(), $fields['FRANCHISE'], $this->getId());
+        $fields['FRANCHISE'] = static::getXmlId($fields['FRANCHISE'], Manager::getIBCode(Franchise::getName()));
+
+        /** Role */
 
         $fields['ROLES'] = APIRole::rebase($this->api->roles());
         foreach ($fields['ROLES'] as &$role) {
             Manager::addLoad(MangaRole::getName(), $role['id'], $this->getId());
-            $role['id'] = self::getXmlId($role['id']);
+            $role['id'] = self::getXmlId($role['id'], Manager::getIBCode(MangaRole::getName()));
 
             if ($role['type'] == Character::getName()) {
                 $fields['CHARACTERS'][] = $role['id'];

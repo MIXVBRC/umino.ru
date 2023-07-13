@@ -4,7 +4,7 @@
 namespace Umino\Anime\Shikimori\Import;
 
 
-class MangaRole extends Entity
+class MangaRole extends AnimeRole
 {
 
 }

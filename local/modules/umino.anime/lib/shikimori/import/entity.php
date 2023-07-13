@@ -19,14 +19,16 @@ use Umino\Anime\Shikimori\API;
 class Entity
 {
     protected string $id;
+    protected string $parent_id;
     protected API\Entity $api;
     protected static CIBlockElement $element;
     protected static array $properties = [];
 
-    public function __construct(string $id, string $parent_sid = null)
+    public function __construct(string $id, string $parent_id = '')
     {
-        $this->id = $id;
-        $this->api = $this->getAPI($parent_sid);
+        $this->id = trim($id);
+        $this->parent_id = trim($parent_id);
+        $this->api = $this->getAPI($this->parent_id);
         if (empty(self::$element)) {
             self::$element = new CIBlockElement();
         }
@@ -37,10 +39,15 @@ class Entity
         return $this->id;
     }
 
+    public function getParentId(): string
+    {
+        return $this->parent_id;
+    }
+
     public function rebaseFields(array $fields): array
     {
         $fields['IBLOCK_ID'] = Manager::getIBID(static::getName());
-        $fields['XML_ID'] = self::getXmlId($this->getId());
+        $fields['XML_ID'] = self::getXmlId($this->getId(), Manager::getIBCode(static::getName()));
 
         return $fields;
     }
@@ -63,19 +70,22 @@ class Entity
         if (self::checkIB($fields['XML_ID'])) return true;
 
         self::prepareFields($fields);
+
         $result = self::$element->Add($fields);
+
         if (empty($result)) {
+
             Logger::log([
                 'error' => self::$element->LAST_ERROR,
                 'fields' => $fields,
             ]);
+
             return false;
         }
-
         return true;
     }
 
-    public function checkIB(string $xmlId)
+    public static function checkIB(string $xmlId): bool
     {
         $entity = ElementTable::getEntity();
         $query = new Query($entity);
@@ -91,10 +101,30 @@ class Entity
         return (bool) $query->fetch()['ID'];
     }
 
+    public static function makeFileArray(string $filepath): array
+    {
+        if (empty($filepath)) return [];
+
+        $info = pathinfo($filepath);
+
+        $fileArray = CFile::MakeFileArray($filepath);
+
+        $extension = explode('/', $fileArray['type'])[1];
+
+        $fileArray['name'] = implode('.', [
+            $info['filename'],
+            $extension,
+        ]);
+
+        if ($info['filename'] == 'missing_original') return [];
+
+        return $fileArray;
+    }
+
     protected static function prepareFields(array &$fields): bool
     {
         if ($fields['DETAIL_PICTURE']) {
-            $fields['DETAIL_PICTURE'] = CFile::MakeFileArray($fields['DETAIL_PICTURE']);
+            $fields['DETAIL_PICTURE'] = self::makeFileArray($fields['DETAIL_PICTURE']);
         }
 
         if (empty($fields['PROPERTY_VALUES'])) return true;
@@ -123,10 +153,10 @@ class Entity
             if (in_array($property['PROPERTY_TYPE'], ['F'])) {
                 if (is_array($value)) {
                     foreach ($value as &$item) {
-                        $item = CFile::MakeFileArray($item);
+                        $item = self::makeFileArray($item);
                     }
                 } else {
-                    $value = CFile::MakeFileArray($value);
+                    $value = self::makeFileArray($value);
                 }
             }
         }
@@ -154,11 +184,11 @@ class Entity
         return static::$properties[static::getName()] = $properties;
     }
 
-    protected function getAPI(string $parent_sid = null): API\Entity
+    protected function getAPI(string $parent_id = ''): API\Entity
     {
         $class = Manager::getAPIClass(static::getName());
-        if ($parent_sid) {
-            return new $class($this->getId(), $parent_sid);
+        if ($parent_id) {
+            return new $class($this->getId(), $parent_id);
         } else {
             return new $class($this->getId());
         }
@@ -182,10 +212,7 @@ class Entity
 
     protected static function getXmlId(...$params): string
     {
-        $result = static::rearrange($params);
-        $result[] = Manager::getIBCode(static::getName());
-        $result = serialize($result);
-        return md5($result);
+        return md5(serialize(static::rearrange($params)));
     }
 
     protected static function getCode(...$params): string
@@ -216,7 +243,7 @@ class Entity
             if (is_array($item)) {
                 $result[] += static::rearrange($item);
             } else {
-                $result[] = $item;
+                $result[] = trim($item);
             }
         }
 

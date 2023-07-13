@@ -11,19 +11,12 @@ use Umino\Anime\Shikimori\Tables\ShikimoriLoadTable;
 
 class Manager
 {
-    // TODO: добавить приоритеты в $types чтобы выгрузка выгружала сначала самые приоритетные элементы
     protected static array $types = [
-        'Entity' => [
-            'Import' => Import\Entity::class,
-            'API' => API\Entity::class,
-            'IB_CODE' => '',
-            'PRIORITY' => 1,
-        ],
         'Anime' => [
             'Import' => Import\Anime::class,
             'API' => API\Anime::class,
             'IB_CODE' => 'animes',
-            'PRIORITY' => 100,
+            'PRIORITY' => 50,
         ],
         'Manga' => [
             'Import' => Import\Manga::class,
@@ -83,6 +76,18 @@ class Manager
             'Import' => Import\Translation::class,
             'API' => API\Translation::class,
             'IB_CODE' => 'translations',
+            'PRIORITY' => 50,
+        ],
+        'Episode' => [
+            'Import' => Import\Episode::class,
+            'API' => API\Episode::class,
+            'IB_CODE' => 'episodes',
+            'PRIORITY' => 50,
+        ],
+        'Franchise' => [
+            'Import' => Import\Franchise::class,
+            'API' => API\Franchise::class,
+            'IB_CODE' => 'franchises',
             'PRIORITY' => 100,
         ],
     ];
@@ -98,6 +103,7 @@ class Manager
         $query
             ->setLimit($limit)
             ->setFilter([
+                'TYPE' => array_keys(static::$types),
                 '=IS_LOAD' => false,
             ])
             ->setOrder([
@@ -128,12 +134,12 @@ class Manager
         foreach ($items as $item) {
             /** @var Import\Entity $import */
             foreach ($item as $id => $import) {
-                $result = $import->load();
-                if ($result) {
-                    ShikimoriLoadTable::update($id, [
-                        'IS_LOAD' => true,
-                    ]);
-                }
+
+                if (!$import->load()) continue;
+
+                ShikimoriLoadTable::update($id, [
+                    'IS_LOAD' => true,
+                ]);
             }
         }
     }
@@ -179,6 +185,8 @@ class Manager
         ;
 
         $result = $query->fetch()['ID'];
+
+        if (empty($result)) return false;
 
         return static::$types[$type]['IB_ID'] = $result;
     }

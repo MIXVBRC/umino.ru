@@ -23,7 +23,7 @@ if (!$lock->lock()) die;
 
 try {
 
-    \Umino\Anime\Shikimori\Manager::load(30);
+    \Umino\Anime\Shikimori\Manager::load(100);
 
     /*
     // Полный импорт

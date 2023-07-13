@@ -13,14 +13,22 @@ class AnimeRole extends Entity
         $fields = parent::rebaseFields($fields);
 
         if ($fields['TYPE'] == 'Character') {
+
+            /** Character */
+
             Manager::addLoad(Character::getName(), $fields['PERSON']);
+
         } else {
+
+            /** People */
+
             Manager::addLoad(People::getName(), $fields['PERSON']);
+
         }
 
         $fields['CODE'] = static::getCode($fields['PERSON'],$fields['NAME']);
 
-        $fields['PERSON'] = self::getXmlId($fields['PERSON']);
+        $fields['PERSON'] = self::getXmlId($fields['PERSON'], Manager::getIBCode($fields['TYPE']));
 
         return [
             'NAME' => $fields['NAME'],

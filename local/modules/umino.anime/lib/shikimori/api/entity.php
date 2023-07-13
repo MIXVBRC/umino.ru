@@ -19,7 +19,7 @@ class Entity
 
     public function __construct(string $id)
     {
-        $this->id = $id;
+        $this->id = trim($id);
         static::$ids[get_called_class()][] = $this;
     }
 

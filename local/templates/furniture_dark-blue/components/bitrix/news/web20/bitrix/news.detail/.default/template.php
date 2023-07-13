@@ -1,4 +1,10 @@
-<? use Umino\Anime\Core;
+<? use Bitrix\Iblock\ElementPropertyTable;
+use Bitrix\Iblock\ElementTable;
+use Bitrix\Iblock\PropertyTable;
+use Bitrix\Main\ORM\Query\Join;
+use Bitrix\Main\ORM\Query\Query;
+use Umino\Anime\Core;
+use Umino\Anime\Shikimori\Tables\ShikimoriLoadTable;
 
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 /** @var array $arParams */
@@ -129,6 +135,143 @@ CJSCore::Init(array("jquery"));
         <div><b>Выберите озвучку: </b></div>
         <div class="translation-list">
         <?
+
+        $episodeIBID = \Umino\Anime\Shikimori\Manager::getIBID(\Umino\Anime\Shikimori\Import\Episode::getName());
+
+        $entity = ElementTable::getEntity();
+        $query = new Query($entity);
+        $query
+            ->setFilter([
+                'IBLOCK_ID' => $episodeIBID,
+                'ELEMENT_PROPERTY.VALUE' => $arResult['XML_ID']
+            ])
+            ->setSelect([
+                'XML_ID',
+            ])
+            ->registerRuntimeField('PROPERTY', [
+                'data_type' => PropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_ID', 'this.IBLOCK_ID')
+                    ->whereIn('ref.CODE', ['ANIME']),
+                'join_type' => 'left',
+            ])
+            ->registerRuntimeField('ELEMENT_PROPERTY', [
+                'data_type' => ElementPropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_PROPERTY_ID', 'this.PROPERTY.ID')
+                    ->whereColumn('ref.IBLOCK_ELEMENT_ID', 'this.ID'),
+                'join_type' => 'inner',
+            ]);
+
+        $episodesXmlIds = array_column($query->fetchAll(), 'XML_ID');
+
+        $entity = ElementTable::getEntity();
+        $query = new Query($entity);
+        $query
+            ->setFilter([
+                'IBLOCK_ID' => $episodeIBID,
+                'XML_ID' => $episodesXmlIds
+            ])
+            ->setSelect([
+                'XML_ID',
+                'NAME',
+                'PROPERTY_MULTIPLE' => 'PROPERTY.MULTIPLE',
+                'PROPERTY_CODE' => 'PROPERTY.CODE',
+                'PROPERTY_VALUE' => 'ELEMENT_PROPERTY.VALUE',
+            ])
+            ->registerRuntimeField('PROPERTY', [
+                'data_type' => PropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_ID', 'this.IBLOCK_ID'),
+                'join_type' => 'left',
+            ])
+            ->registerRuntimeField('ELEMENT_PROPERTY', [
+                'data_type' => ElementPropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_PROPERTY_ID', 'this.PROPERTY.ID')
+                    ->whereColumn('ref.IBLOCK_ELEMENT_ID', 'this.ID'),
+                'join_type' => 'inner',
+            ]);
+
+        $items = [];
+        $properties = [];
+        foreach ($query->fetchAll() as $item) {
+            if ($item['PROPERTY_MULTIPLE'] == 'Y') {
+                $properties[$item['XML_ID']][$item['PROPERTY_CODE']][] = $item['PROPERTY_VALUE'];
+            } else {
+                $properties[$item['XML_ID']][$item['PROPERTY_CODE']] = $item['PROPERTY_VALUE'];
+            }
+
+            unset($item['PROPERTY_CODE'],$item['PROPERTY_VALUE'],$item['PROPERTY_MULTIPLE']);
+
+            if ($items[$item['XML_ID']]) continue;
+            $items[$item['XML_ID']] = $item;
+        }
+
+        if (empty($items)) die;
+
+        foreach ($items as &$item) {
+            $item['PROPERTIES'] = $properties[$item['XML_ID']];
+        } unset($item);
+
+        $episodes = $items;
+        unset($items);
+
+        $translationsXmlIds = array_column(array_column($episodes, 'PROPERTIES'), 'TRANSLATION');
+
+        $translationsIBID = \Umino\Anime\Shikimori\Manager::getIBID(\Umino\Anime\Shikimori\Import\Translation::getName());
+
+        $entity = ElementTable::getEntity();
+        $query = new Query($entity);
+        $query
+            ->setFilter([
+                'IBLOCK_ID' => $translationsIBID,
+                'XML_ID' => $translationsXmlIds
+            ])
+            ->setSelect([
+                'XML_ID',
+                'NAME',
+                'PROPERTY_MULTIPLE' => 'PROPERTY.MULTIPLE',
+                'PROPERTY_CODE' => 'PROPERTY.CODE',
+                'PROPERTY_VALUE' => 'ELEMENT_PROPERTY.VALUE',
+            ])
+            ->registerRuntimeField('PROPERTY', [
+                'data_type' => PropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_ID', 'this.IBLOCK_ID'),
+                'join_type' => 'left',
+            ])
+            ->registerRuntimeField('ELEMENT_PROPERTY', [
+                'data_type' => ElementPropertyTable::class,
+                'reference' => Join::on('ref.IBLOCK_PROPERTY_ID', 'this.PROPERTY.ID')
+                    ->whereColumn('ref.IBLOCK_ELEMENT_ID', 'this.ID'),
+                'join_type' => 'inner',
+            ]);
+
+        $items = [];
+        $properties = [];
+        foreach ($query->fetchAll() as $item) {
+            if ($item['PROPERTY_MULTIPLE'] == 'Y') {
+                $properties[$item['XML_ID']][$item['PROPERTY_CODE']][] = $item['PROPERTY_VALUE'];
+            } else {
+                $properties[$item['XML_ID']][$item['PROPERTY_CODE']] = $item['PROPERTY_VALUE'];
+            }
+
+            unset($item['PROPERTY_CODE'],$item['PROPERTY_VALUE'],$item['PROPERTY_MULTIPLE']);
+
+            if ($items[$item['XML_ID']]) continue;
+            $items[$item['XML_ID']] = $item;
+        }
+
+        if (empty($items)) die;
+
+        foreach ($items as &$item) {
+            $item['PROPERTIES'] = $properties[$item['XML_ID']];
+        } unset($item);
+
+        $translations = $items;
+        unset($items);
+
+        pre($translations);
+        pre($episodes);
+
+
+        die;
         $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
             'filter' => [
                 'SERIAL_XML_ID' => $arResult['XML_ID'],

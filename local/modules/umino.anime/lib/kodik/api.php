@@ -87,8 +87,9 @@ class API
     public static function getDefaultParams(): array
     {
         return [
-            'with_seasons' => 'true',
+//            'with_seasons' => 'true',
             'with_episodes' => 'true',
+//            'with_episodes_data' => 'true',
 //            'with_material_data' => 'true',
             'token' => Core::getAPIToken(),
         ];
@@ -117,9 +118,7 @@ class API
 
             $request = Request::getResponse($url);
 
-            Core::keysToUpperCase($request);
-
-            $url = $request['NEXT_PAGE'] ? : '';
+            $url = $request['next_page'] ? : '';
 
             if (Core::getAPISaveNextPage()) {
                 Core::setAPINextPage($url);
@@ -133,10 +132,10 @@ class API
             if (empty($url)) break;
 
             if (Core::getAPIFill()) {
-                self::fill($request['RESULTS']);
+                self::fill($request['results']);
             }
 
-            $result = array_merge($result, $request['RESULTS']);
+            $result = array_merge($result, $request['results']);
         }
 
         return $result;
@@ -199,8 +198,8 @@ class API
         $responses = self::getAsyncResponse($urls);
 
         foreach ($responses as $key => $response) {
-            if (empty($response['RESULTS'])) continue;
-            $result[$key] = $response['RESULTS'];
+            if (empty($response['results'])) continue;
+            $result[$key] = $response['results'];
         }
 
         return $result;
@@ -259,16 +258,9 @@ class API
         return $items;
     }
 
-    private static function getAsyncResponse(array $urls): array
+    protected static function getAsyncResponse(array $urls): array
     {
-        $request = new Request();
-        $request->addToAsyncQueue($urls);
-        $request->initAsyncRequest();
-        $responses = $request->getResult();
-
-        Core::keysToUpperCase($responses);
-
-        return $responses;
+        return Request::getResponseAsync($urls);
     }
 
     /**
