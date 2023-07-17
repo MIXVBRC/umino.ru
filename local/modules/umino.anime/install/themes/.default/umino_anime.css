@@ -1,0 +1,23 @@
+.adm-umino_anime .adm-main-menu-item-icon {
+    background-image: url('/bitrix/images/umino.anime/umino_global_logo.png');
+    background-position: center 10px;
+    height: 49px;
+}
+
+.adm-umino_anime:hover .adm-main-menu-item-icon {
+    background-position: center -38px;
+    height: 49px;
+}
+
+.adm-main-menu-item-active.adm-umino_anime .adm-main-menu-item-icon {
+    background-position: center -38px;
+    height: 49px;
+}
+
+.umino_shikimori_menu_icon {
+    background: url('/bitrix/images/umino.anime/umino_icons_sprite.png') no-repeat center -2px;
+}
+
+.umino_kodik_menu_icon {
+    background: url('/bitrix/images/umino.anime/umino_icons_sprite.png') no-repeat center -30px;
+}

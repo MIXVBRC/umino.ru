@@ -111,13 +111,17 @@ class Episode extends Video
                 $result[$id] = $item;
             } else {
                 foreach ($item['seasons'] as $num => $season) {
+                    $episodes = [];
+                    foreach ($season['episodes'] as $episodeNum => $episode) {
+                        $episodes[$episode['title'] ?: $episodeNum] = $episode['link'];
+                    }
                     $id = md5(serialize([trim($item['id']), $num]));
                     $new = $item;
                     $new['id'] = $id;
                     $new['season'] = $num;
                     $new['link'] = $season['link'];
                     $new['season_type'] = static::$seasonTypeLang[$season['title']];
-                    $new['episodes'] = $season['episodes'];
+                    $new['episodes'] = $episodes;
                     $new['episodes_count'] = count($season['episodes']);
                     unset($new['seasons'], $new['screenshots']);
                     $result[$id] = $new;

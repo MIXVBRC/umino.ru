@@ -13,7 +13,7 @@ class Video extends Entity
         $fields['CODE'] = static::getCode($this->getId(),$fields['NAME']);
 
         return [
-            'NAME' => $fields['NAME'],
+            'NAME' => $fields['NAME'] ?: $fields['PLAYER_URL'],
             'XML_ID' => $fields['XML_ID'],
             'IBLOCK_ID' => $fields['IBLOCK_ID'],
             'CODE' => $fields['CODE'],

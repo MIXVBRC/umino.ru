@@ -55,7 +55,7 @@ CJSCore::Init(array("jquery"));
 	<div style="clear:both"></div>
 	<br />
 	<?
-	foreach($arResult["DISPLAY_PROPERTIES"] as $pid=>$arProperty):?>
+	foreach($arResult["DISPLAY_PROPERTIES"] as $pid=>$arProperty): break?>
 
 		<?=$arProperty["NAME"]?>:&nbsp;
 		<?if(is_array($arProperty["DISPLAY_VALUE"])):?>
@@ -91,6 +91,21 @@ CJSCore::Init(array("jquery"));
     <br>
     <br>
     <style>
+        /*[data-tabs] [data-tabs-header] [data-tabs-footer] [data-tabs-item] [data-tabs-active]*/
+        [data-tabs] [data-tabs-header] [data-tabs-active] {
+            display: inline-block !important;
+            background-color: #0A3A68;
+            color: #fff;
+        }
+
+        [data-tabs] [data-tabs-footer] [data-tabs-active] {
+            display: block !important;
+        }
+
+        [data-tabs] [data-tabs-footer] [data-tabs-item] {
+            display: none;
+        }
+
         .translation-list {
             padding: 0;
             margin: 0;
@@ -176,6 +191,7 @@ CJSCore::Init(array("jquery"));
                 'PROPERTY_MULTIPLE' => 'PROPERTY.MULTIPLE',
                 'PROPERTY_CODE' => 'PROPERTY.CODE',
                 'PROPERTY_VALUE' => 'ELEMENT_PROPERTY.VALUE',
+                'PROPERTY_DESCRIPTION' => 'ELEMENT_PROPERTY.DESCRIPTION',
             ])
             ->registerRuntimeField('PROPERTY', [
                 'data_type' => PropertyTable::class,
@@ -186,19 +202,31 @@ CJSCore::Init(array("jquery"));
                 'data_type' => ElementPropertyTable::class,
                 'reference' => Join::on('ref.IBLOCK_PROPERTY_ID', 'this.PROPERTY.ID')
                     ->whereColumn('ref.IBLOCK_ELEMENT_ID', 'this.ID'),
-                'join_type' => 'inner',
+                'join_type' => 'left',
             ]);
 
         $items = [];
         $properties = [];
         foreach ($query->fetchAll() as $item) {
+
+            if ($item['PROPERTY_DESCRIPTION']) {
+                $item['PROPERTY_VALUE'] = [
+                    'VALUE' => $item['PROPERTY_VALUE'],
+                    'DESCRIPTION' => $item['PROPERTY_DESCRIPTION'],
+                ];
+            }
+
             if ($item['PROPERTY_MULTIPLE'] == 'Y') {
                 $properties[$item['XML_ID']][$item['PROPERTY_CODE']][] = $item['PROPERTY_VALUE'];
             } else {
                 $properties[$item['XML_ID']][$item['PROPERTY_CODE']] = $item['PROPERTY_VALUE'];
             }
 
-            unset($item['PROPERTY_CODE'],$item['PROPERTY_VALUE'],$item['PROPERTY_MULTIPLE']);
+            unset($item['PROPERTY_CODE'],
+                $item['PROPERTY_VALUE'],
+                $item['PROPERTY_MULTIPLE'],
+                $item['PROPERTY_DESCRIPTION']
+            );
 
             if ($items[$item['XML_ID']]) continue;
             $items[$item['XML_ID']] = $item;
@@ -230,6 +258,7 @@ CJSCore::Init(array("jquery"));
                 'PROPERTY_MULTIPLE' => 'PROPERTY.MULTIPLE',
                 'PROPERTY_CODE' => 'PROPERTY.CODE',
                 'PROPERTY_VALUE' => 'ELEMENT_PROPERTY.VALUE',
+                'PROPERTY_DESCRIPTION' => 'ELEMENT_PROPERTY.DESCRIPTION',
             ])
             ->registerRuntimeField('PROPERTY', [
                 'data_type' => PropertyTable::class,
@@ -246,13 +275,25 @@ CJSCore::Init(array("jquery"));
         $items = [];
         $properties = [];
         foreach ($query->fetchAll() as $item) {
+
+            if ($item['PROPERTY_DESCRIPTION']) {
+                $item['PROPERTY_VALUE'] = [
+                    'VALUE' => $item['PROPERTY_VALUE'],
+                    'DESCRIPTION' => $item['PROPERTY_DESCRIPTION'],
+                ];
+            }
+
             if ($item['PROPERTY_MULTIPLE'] == 'Y') {
                 $properties[$item['XML_ID']][$item['PROPERTY_CODE']][] = $item['PROPERTY_VALUE'];
             } else {
                 $properties[$item['XML_ID']][$item['PROPERTY_CODE']] = $item['PROPERTY_VALUE'];
             }
 
-            unset($item['PROPERTY_CODE'],$item['PROPERTY_VALUE'],$item['PROPERTY_MULTIPLE']);
+            unset($item['PROPERTY_CODE'],
+                $item['PROPERTY_VALUE'],
+                $item['PROPERTY_MULTIPLE'],
+                $item['PROPERTY_DESCRIPTION']
+            );
 
             if ($items[$item['XML_ID']]) continue;
             $items[$item['XML_ID']] = $item;
@@ -267,106 +308,92 @@ CJSCore::Init(array("jquery"));
         $translations = $items;
         unset($items);
 
-        pre($translations);
-        pre($episodes);
-
-
-        die;
-        $episodes = \Umino\Anime\Tables\EpisodesTable::getList([
-            'filter' => [
-                'SERIAL_XML_ID' => $arResult['XML_ID'],
-                'ACTIVE' => 'Y',
-                [
-                    'LOGIC' => 'OR',
-                    ['TYPE' => false],
-                    ['TYPE' => ['OVA']],
-                ],
-//                'EPISODES_COUNT' => $arResult['PROPERTIES']['EPISODES_AIRED']['VALUE']
-            ],
-        ])->fetchAll();
-
-        $translations = [];
         foreach ($episodes as $episode) {
-            $translations[] = $episode['TRANSLATION_XML_ID'];
-        }
 
-        $translations = array_unique($translations);
+            $translation = $episode['PROPERTIES']['TRANSLATION'];
+            $seasonLink = $episode['PROPERTIES']['LINK'];
+            $season = $episode['PROPERTIES']['SEASON'];
 
+            if ($seasonType = $episode['PROPERTIES']['SEASON_TYPE']) {
+                if ($season > 0) {
+                    $season = $season > 0 ? $season : '';
+                    $season = $seasonType;
+                } else {
+                    $season .= ' | ' . $seasonType;
+                }
+            }
 
+            $episodeList = [];
 
-        $translationsDB = CIBlockElement::GetList([],[
-            'XML_ID' => $translations
-        ],false,false, ['NAME', 'XML_ID', 'PROPERTY_TYPE']);
+            foreach ($episode['PROPERTIES']['EPISODES'] as $episode) {
+                if (empty($episode['VALUE'])) continue;
+                $episodeList[$episode['DESCRIPTION']] = $episode['VALUE'];
+            }
 
-        $translations = [];
-        while ($translation = $translationsDB->GetNext()) {
-            $translations[$translation['XML_ID']] = [
-                'NAME' => $translation['NAME'],
-                'XML_ID' => $translation['XML_ID'],
-                'TYPE' => $translation['PROPERTY_TYPE_VALUE'],
-            ];
-        }
-
-
-
-        $result = [];
-        foreach ($episodes as $episode) {
-            $translation = $translations[$episode['TRANSLATION_XML_ID']]['NAME'];
-            if ($episode['EPISODES']) {
-                $result[$translation][$episode['SEASON']] = [
-                    'TYPE' => $episode['TYPE']?:'Эпизоды',
-                    'EPISODES' => $episode['EPISODES'],
-                ];
+            if ($episodeList) {
+                $translations[$translation]['ANIME'][$season] = $episodeList;
             } else {
-                $result[$translation] = [
-                    'TYPE' => $episode['TYPE'],
-                    'LINK' => $episode['ANIME_LINK'],
-                ];
+                $translations[$translation]['ANIME'] = $seasonLink;
             }
         }
 
         ?>
 
-        <? foreach ($result as $translation => $seasons): ?>
-            <div>
-                <? if (empty($seasons['LINK'])): ?>
-                    <h3><?=$translation?></h3>
-                    <? foreach ($seasons as $season => $item): ?>
-                        <div>
-<!--                            <br>-->
-<!--                            <h4>Сезон: --><?//=$season?><!--</h4>-->
-                            <h5><?=$item['TYPE']?></h5>
-                            <ul>
-                                <? foreach ($item['EPISODES'] as $episode => $link): ?>
-                                    <li>
-                                        <span data-link="<?=$link?>"><?=$episode?></span>
-                                    </li>
-                                <? endforeach ?>
-                            </ul>
-                        </div>
+            <br>
+            <div class="tab" data-tabs>
+                <div class="tab_header" data-tabs-header>
+                    <? foreach ($translations as $xmlId => $translation): ?>
+                        <? if (is_array($translation['ANIME'])): ?>
+                            <span style="margin: 5px; cursor: pointer" data-tabs-item="<?= $xmlId ?>"><?= $translation['NAME'] ?></span>
+                        <? else: ?>
+                            <span style="margin: 5px; cursor: pointer" data-link="<?= $translation['ANIME'] ?>"><?= $translation['NAME'] ?></span>
+                        <? endif ?>
                     <? endforeach ?>
-                <? else: ?>
-                    <? if ($item['TYPE']): ?>
-                        <h5><?=$item['TYPE']?></h5>
-                    <? endif; ?>
-                    <ul>
-                        <li>
-                            <span data-link="<?=$seasons['LINK']?>"><?=$translation?></span>
-                        </li>
-                    </ul>
-                <? endif ?>
+                </div>
+                <div class="tab_body" data-tabs-footer>
+
+                    <? foreach ($translations as $xmlId => $translation): ?>
+
+                        <? if (!is_array($translation['ANIME'])) continue; ?>
+
+                            <div data-tabs-item="<?= $xmlId ?>">
+                                <hr>
+                                <ul>
+
+                                    <? foreach ($translation['ANIME'] as $season => $episodes): ?>
+
+                                        <? if (count($translation['ANIME']) > 1): ?>
+
+                                            <h5><?= $season ?></h5>
+
+                                        <? endif ?>
+
+                                        <? foreach ($episodes as $num => $link): ?>
+
+                                            <li>
+                                                <span data-link="<?=$link?>"><?=$num?></span>
+                                            </li>
+
+                                        <? endforeach ?>
+
+                                    <? endforeach; ?>
+
+                                </ul>
+                                <hr>
+                            </div>
+                    <? endforeach; ?>
+
+                </div>
+
             </div>
-            <hr>
-        <? endforeach; ?>
+
+
+
         </div>
         <br>
         <br>
         <div data-player></div>
-<!--
-        <iframe src="//kodik.info/serial/9153/cddf6e92e8e68f202dc7c8cac0c4ed7c/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
-        <iframe src="//kodik.info/season/82121/c9b10ebb0eb71f979dbd5518218ab5c3/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
-        <iframe src="//kodik.info/seria/1014571/22df9cdc28101f4acf4fb57ac537dcd5/720p" width="878" height="493" frameborder="0" allowfullscreen=""></iframe>
--->
+
         <script type="text/javascript">
 
         </script>
@@ -416,6 +443,15 @@ CJSCore::Init(array("jquery"));
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+
+        $('[data-tabs] [data-tabs-header] [data-tabs-item]').on('click', function () {
+            $('[data-tabs] [data-tabs-active]').removeAttr('data-tabs-active');
+            $(this).attr('data-tabs-active', '');
+            $('[data-tabs] [data-tabs-footer] [data-tabs-item='+$(this).data('tabs-item')+']').attr('data-tabs-active', '');
+        });
+
+
+
         $('[data-link]').on('click', function () {
             let link = $(this).data('link')
             let player = $('[data-player]');
@@ -426,8 +462,10 @@ CJSCore::Init(array("jquery"));
 
             function kodikMessageListener(message) {
                 switch (message.data.key) {
-                    case 'kodik_player_play':
-                        console.log(message);
+                    // case 'kodik_player_play':
+                    //     console.log(message.data);
+                    case 'kodik_player_time_update':
+                        console.log(message.data);
                 }
             }
 

@@ -62,8 +62,9 @@ $APPLICATION->SetTitle("Поиск аниме");
 		"SHOW_ORDER_BY" => "Y",
 		"SHOW_TAGS_CLOUD" => "N",
 		"arrFILTER_iblock_umino" => array(
-			0 => "11",
-		)
+			0 => "17",
+		),
+		"CACHE_NOTES" => ""
 	),
 	false
 );?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

@@ -1,6 +1,6 @@
 <?php
 $arUrlRewrite=array (
-  1 =>
+  0 => 
   array (
     'CONDITION' => '#^/anime/#',
     'RULE' => '',

@@ -24,12 +24,11 @@ class Episode extends Entity
         $fields['ANIME'] = self::getXmlId($fields['SHIKIMORI_ID'], Manager::getIBCode(Anime::getName()));
         $fields['TRANSLATION'] = self::getXmlId($fields['TRANSLATION']['ID'], Manager::getIBCode(Translation::getName()));
 
-        foreach ($fields['EPISODES'] as $num => $episode) {
-            $fields['EPISODES'][] = [
+        foreach ($fields['EPISODES'] as $num => &$episode) {
+            $episode = [
                 'VALUE' => $episode,
                 'DESCRIPTION' => $num,
             ];
-            unset($fields['EPISODES'][$num]);
         }
 
         return [

@@ -21,7 +21,6 @@ Class umino_anime extends CModule
     public function __construct()
     {
         $this->MODULE_ID = $this->getModuleID();
-
         $this->MODULE_NAME = Loc::getMessage("UMINO_ANIME_INSTALL_NAME");
         $this->MODULE_DESCRIPTION = Loc::getMessage("UMINO_ANIME_INSTALL_DESCRIPTION");
         $this->MODULE_PATH = $this->getModulePath();
@@ -46,7 +45,7 @@ Class umino_anime extends CModule
         return str_ireplace('_', '.', get_class($this));
     }
 
-    function InstallDB()
+    function InstallDB(): bool
     {
         $sqlBatch = file_get_contents($this->MODULE_PATH . '/install/db/mysql/install.sql');
         $sqlBatchErrors = $this->connection->executeSqlBatch($sqlBatch);
@@ -56,7 +55,7 @@ Class umino_anime extends CModule
         return true;
     }
 
-    function UnInstallDB()
+    function UnInstallDB(): bool
     {
         $sqlBatch = file_get_contents($this->MODULE_PATH . '/install/db/mysql/uninstall.sql');
         $sqlBatchErrors = $this->connection->executeSqlBatch($sqlBatch);
@@ -66,23 +65,35 @@ Class umino_anime extends CModule
         return true;
     }
 
-    function InstallEvents()
+    function InstallEvents(): bool
     {
+        RegisterModuleDependences("main", "OnBuildGlobalMenu", $this->MODULE_ID, "\Umino\Anime\Core", "OnBuildGlobalMenuHandler");
+
         return true;
     }
 
-    function UnInstallEvents()
+    function UnInstallEvents(): bool
     {
+        UnRegisterModuleDependences("main", "OnBuildGlobalMenu", $this->MODULE_ID, "\Umino\Anime\Core", "OnBuildGlobalMenuHandler");
+
         return true;
     }
 
-    function InstallFiles()
+    function InstallFiles(): bool
     {
+        CopyDirFiles($this->MODULE_PATH . '/install/themes', getenv('DOCUMENT_ROOT') . '/bitrix/themes', true, true);
+        CopyDirFiles($this->MODULE_PATH . '/install/images', getenv('DOCUMENT_ROOT') . '/bitrix/images', true, true);
+        CopyDirFiles($this->MODULE_PATH . '/install/admin', getenv('DOCUMENT_ROOT') . '/bitrix/admin', true, true);
+
         return true;
     }
 
-    function UnInstallFiles()
+    function UnInstallFiles(): bool
     {
+        DeleteDirFiles($this->MODULE_PATH . '/install/admin', getenv('DOCUMENT_ROOT') . '/bitrix/admin');
+        DeleteDirFiles($this->MODULE_PATH . '/install/themes/.default', getenv('DOCUMENT_ROOT') . '/bitrix/themes/.default');
+        DeleteDirFilesEx('/bitrix/images/'.$this->MODULE_ID.'/');
+
         return true;
     }
 
@@ -91,12 +102,14 @@ Class umino_anime extends CModule
         RegisterModule($this->MODULE_ID);
 
         $this->InstallFiles();
+        $this->InstallEvents();
         $this->InstallDB();
     }
 
     function DoUninstall()
     {
         $this->UnInstallDB();
+        $this->UnInstallEvents();
         $this->UnInstallFiles();
 
         UnRegisterModule($this->MODULE_ID);

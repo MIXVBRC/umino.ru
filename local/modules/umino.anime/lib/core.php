@@ -8,6 +8,7 @@ use Bitrix\Main\Event;
 use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\Type\DateTime;
 use CDatabase;
+use CMain;
 use COption;
 
 class Core
@@ -20,6 +21,11 @@ class Core
     public static function getModuleId(): string
     {
         return self::$module_id;
+    }
+
+    public static function getModulePath(): string
+    {
+        return __DIR__ . '/..';
     }
 
     /** Основные настройки */
@@ -191,6 +197,16 @@ class Core
         return COption::SetOptionString(self::getModuleId(), 'api_next_page', $link);
     }
 
+    /** Последняя ссылка */
+    public static function getImportTypesPriority(): array
+    {
+        return unserialize(COption::GetOptionString(self::getModuleId(), 'import_types_priority'));
+    }
+    public static function setImportTypesPriority(array $value): bool
+    {
+        return COption::SetOptionString(self::getModuleId(), 'import_types_priority', serialize($value));
+    }
+
     protected static function getBitrixBool(bool $bool): string
     {
         return $bool ? 'Y' : 'N';
@@ -249,4 +265,36 @@ class Core
             $data_B
         );
     }
+
+    public function OnBuildGlobalMenuHandler(&$aGlobalMenu, &$aModuleMenu)
+    {
+        /** @global CMain $APPLICATION */
+        global $APPLICATION;
+        $APPLICATION->SetAdditionalCSS('/bitrix/themes/.default/umino_anime.css');
+        $aGlobalMenu['global_menu_umino'] = [
+            'menu_id' => 'umino_anime',
+            'page_icon' => 'umino_title_icon',
+            'index_icon' => 'umino_page_icon',
+            'text' => '«Umino»',
+            'title' => '«Umino»',
+            'sort' => '70',
+            'items_id' => 'global_menu_umino',
+            'help_section' => 'umino',
+            'items' => []
+        ];
+    }
+
+    public static function reloadFiles(): void
+    {
+        DeleteDirFiles(self::getModulePath() . '/install/admin', getenv('DOCUMENT_ROOT') . '/bitrix/admin');
+        DeleteDirFiles(self::getModulePath() . '/install/themes/.default', getenv('DOCUMENT_ROOT') . '/bitrix/themes/.default');
+        DeleteDirFilesEx('/bitrix/images/'.self::getModuleId().'/');
+        DeleteDirFilesEx('/bitrix/js/'.self::getModuleId().'/');
+
+        CopyDirFiles(self::getModulePath() . '/install/js', getenv('DOCUMENT_ROOT') . '/bitrix/js', true, true);
+        CopyDirFiles(self::getModulePath() . '/install/themes', getenv('DOCUMENT_ROOT') . '/bitrix/themes', true, true);
+        CopyDirFiles(self::getModulePath() . '/install/images', getenv('DOCUMENT_ROOT') . '/bitrix/images', true, true);
+        CopyDirFiles(self::getModulePath() . '/install/admin', getenv('DOCUMENT_ROOT') . '/bitrix/admin', true, true);
+    }
+
 }

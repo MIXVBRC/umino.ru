@@ -32,8 +32,10 @@ class Manga extends Entity
 
         /** Franchise */
 
-        Manager::addLoad(Franchise::getName(), $fields['FRANCHISE'], $this->getId());
-        $fields['FRANCHISE'] = static::getXmlId($fields['FRANCHISE'], Manager::getIBCode(Franchise::getName()));
+        if ($fields['FRANCHISE']) {
+            Manager::addLoad(Franchise::getName(), $fields['FRANCHISE'], $this->getId());
+            $fields['FRANCHISE'] = static::getXmlId($fields['FRANCHISE'], Manager::getIBCode(Franchise::getName()));
+        }
 
         /** Role */
 

@@ -17,13 +17,6 @@ class Franchise extends Entity
             'XML_ID' => $fields['XML_ID'],
             'IBLOCK_ID' => $fields['IBLOCK_ID'],
             'CODE' => $fields['CODE'],
-//            'PROPERTY_VALUES' => [
-//                'URL' => $fields['URL'],
-//                'IMAGE_URL' => $fields['IMAGE_URL'],
-//                'PLAYER_URL' => $fields['PLAYER_URL'],
-//                'TYPE' => $fields['KIND'],
-//                'HOSTING' => $fields['HOSTING'],
-//            ]
         ];
     }
 }

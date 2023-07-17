@@ -89,7 +89,7 @@ class API
         return [
 //            'with_seasons' => 'true',
             'with_episodes' => 'true',
-//            'with_episodes_data' => 'true',
+            'with_episodes_data' => 'true',
 //            'with_material_data' => 'true',
             'token' => Core::getAPIToken(),
         ];
