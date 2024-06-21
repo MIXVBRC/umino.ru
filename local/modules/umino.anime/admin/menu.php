@@ -15,14 +15,14 @@ $menuList = [
         'items_id' => 'umino',
         'items' => [
             [
-                'text' => 'API',
-                'title' => 'API',
+                'text' => 'Shikimori',
+                'title' => 'Shikimori',
                 'url' => 'umino_shikimori.php',
                 'icon' => 'umino_shikimori_menu_icon',
             ],
             [
-                'text' => 'Приоритет',
-                'title' => 'Приоритет',
+                'text' => 'Kodik',
+                'title' => 'Kodik',
                 'url' => 'umino_kodik.php',
                 'icon' => 'umino_kodik_menu_icon',
             ],

@@ -8,13 +8,12 @@ use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\PropertyTable;
 use Bitrix\Main\ORM\Query\Query;
 use CModule;
+use Umino\Anime\Cache;
 use Umino\Anime\Core;
 use Umino\Anime\Shikimori\Tables\ShikimoriLoadTable;
 
 class Manager
 {
-    protected static array $cache = [];
-
     protected static array $types = [
         'Anime' => [
             'Import' => Import\Anime::class,
@@ -191,8 +190,8 @@ class Manager
 
     public static function getPriority(string $type): string
     {
-        $priority = self::$cache[__FUNCTION__];
-        if (empty($priority)) $priority = self::$cache[__FUNCTION__] = Core::getImportTypesPriority();
+        $priority = Cache::get();
+        if (empty($priority)) $priority = Cache::set(Core::getImportTypesPriority());
         return isset($priority[$type]) ? $priority[$type] : 100;
     }
 

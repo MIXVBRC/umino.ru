@@ -4,6 +4,7 @@ namespace Umino\Anime;
 
 use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Iblock\IblockTable;
+use Bitrix\Main\Config\Option;
 use Bitrix\Main\Event;
 use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\Type\DateTime;
@@ -28,35 +29,44 @@ class Core
         return __DIR__ . '/..';
     }
 
-    /** Основные настройки */
-
-    /** Kodik API токен */
-    public static function getAPIToken(): string
+    public static function getOption(string $name): string
     {
-        return (string) COption::GetOptionString(self::getModuleId(), 'api_token');
+        return Cache::get($name) ?: Cache::set(Option::get(self::getModuleId(), $name), $name);
     }
 
-    /** Kodik API ссылка */
-    public static function getAPIUrl(): string
+    public static function setOption(string $name, string $value): void
     {
-        return (string) COption::GetOptionString(self::getModuleId(), 'api_url');
+        Option::set(self::getModuleId(), $name, $value);
     }
 
-    /** Полный импорт */
-    public static function getAPIFullImport(): bool
+    /** Kodik */
+
+    /** API токен */
+    public static function getKodikAPIToken(): string
     {
-        return COption::GetOptionString(self::getModuleId(), 'api_full_import') === 'Y';
+        return self::getOption('api_kodik_token');
     }
 
-    public static function setAPIFullImport(bool $bool): void
+    public static function setKodikAPIToken(string $value): void
     {
-        self::setOption('api_full_import', self::getBitrixBool($bool));
+        self::setOption('api_kodik_token', $value);
+    }
+
+    /** API ссылка */
+    public static function getKodikAPIUrl(): string
+    {
+        return self::getOption('api_kodik_url');
+    }
+
+    public static function setKodikAPIUrl(string $value): void
+    {
+        self::setOption('api_kodik_url', $value);
     }
 
     /** Импорт по дате обновления */
     public static function getAPIDateUpdateImport(): bool
     {
-        return COption::GetOptionString(self::getModuleId(), 'api_date_update_import') === 'Y';
+        return self::getOption('api_date_update_import') === 'Y';
     }
 
     public static function setAPIDateUpdateImport(bool $bool): void
@@ -65,41 +75,41 @@ class Core
     }
 
     /** Количество результатов в запросе */
-    public static function getAPILimit(): int
+    public static function getKodikAPILimit(): string
     {
-        return (int) COption::GetOptionInt(self::getModuleId(), 'api_limit');
+        return self::getOption('api_kodik_limit');
     }
 
-    public static function setAPILimit(int $limit)
+    public static function setKodikAPILimit(int $limit)
     {
         $limit = $limit < 100 ? $limit : 100;
         $limit = $limit > 0 ? $limit : 1;
-        self::setOption('api_limit', $limit);
+        self::setOption('api_kodik_limit', $limit);
     }
 
     /** Количество результатов в запросе */
-    public static function getAPILimitPage(): int
+    public static function getKodikAPILimitPage(): string
     {
-        return (int) COption::GetOptionInt(self::getModuleId(), 'api_limit_page');
+        return self::getOption('api_kodik_limit_page');
     }
 
-    public static function setAPILimitPage(int $limit)
+    public static function setKodikAPILimitPage(int $limit)
     {
         $limit = $limit < 10 ? $limit : 10;
         $limit = $limit > 0 ? $limit : 1;
-        self::setOption('api_limit_page', $limit);
+        self::setOption('api_kodik_limit_page', $limit);
     }
 
     /** Заполнять результаты запроса поиском? (увеличение нагрузки) */
     public static function getAPIFill(): bool
     {
-        return COption::GetOptionString(self::getModuleId(), 'api_fill') === 'Y';
+        return self::getOption('api_fill') === 'Y';
     }
 
     /** Сохранять следующую страницу пагинации? */
     public static function getAPISaveNextPage(): bool
     {
-        return COption::GetOptionString(self::getModuleId(), 'api_save_next_page') === 'Y';
+        return self::getOption('api_save_next_page') === 'Y';
     }
 
     public static function setAPISaveNextPage(bool $bool): void
@@ -110,12 +120,24 @@ class Core
     /** Получить последнюю дату обновления */
     public static function getAPILastDateUpdate(): string
     {
-        return COption::GetOptionString(self::getModuleId(), 'api_last_date_update');
+        return self::getOption('api_last_date_update');
     }
 
     public static function setAPILastDateUpdate(string $date)
     {
         self::setOption('api_last_date_update', self::getDate($date));
+    }
+
+    /** Shikimori */
+
+    public static function getShikimoriAPIUrl(): string
+    {
+        return self::getOption('api_shikimori_url');
+    }
+
+    public static function setShikimoriAPIUrl(string $value): void
+    {
+        self::setOption('api_shikimori_url', $value);
     }
 
     /** Настройки наполнения */
@@ -153,17 +175,6 @@ class Core
     public static function getLogsShowCount(): int
     {
         return (int) COption::GetOptionInt(self::getModuleId(), 'logs_show_count');
-    }
-
-    /** SET */
-
-    public static function setOption(string $name, string $value): bool
-    {
-        if (is_numeric($value)) {
-            return COption::SetOptionInt(self::getModuleId(), $name, $value);
-        } else {
-            return COption::SetOptionString(self::getModuleId(), $name, $value);
-        }
     }
 
     /** Вспомогательные функции */

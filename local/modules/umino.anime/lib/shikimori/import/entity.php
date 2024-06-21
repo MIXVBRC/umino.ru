@@ -89,7 +89,7 @@ class Entity
         } else {
 
             self::prepareFields($fields);
-            
+
             $result = self::$element->Add($fields);
 
         }

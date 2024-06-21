@@ -91,7 +91,7 @@ class API
             'with_episodes' => 'true',
             'with_episodes_data' => 'true',
 //            'with_material_data' => 'true',
-            'token' => Core::getAPIToken(),
+            'token' => Core::getKodikAPIToken(),
         ];
     }
 
@@ -114,7 +114,7 @@ class API
     {
         $result = [];
 
-        for ($page = 0; $page < Core::getAPILimitPage(); $page++) {
+        for ($page = 0; $page < Core::getKodikAPILimitPage(); $page++) {
 
             $request = Request::getResponse($url);
 
@@ -123,7 +123,6 @@ class API
             if (Core::getAPISaveNextPage()) {
                 Core::setAPINextPage($url);
                 if (empty($url)) {
-                    Core::setAPIFullImport(false);
                     Core::setAPISaveNextPage(false);
                     Core::setAPIDateUpdateImport(true);
                 }
@@ -150,12 +149,12 @@ class API
         $params = array_merge(
             self::getDefaultParams(),
             [
-                'limit' => Core::getAPILimit(),
+                'limit' => Core::getKodikAPILimit(),
                 'types' => self::getTypes($types),
             ]
         );
 
-        $url = Request::buildURL([Core::getAPIUrl(),__FUNCTION__], $params);
+        $url = Request::buildURL([Core::getKodikAPIUrl(),__FUNCTION__], $params);
 
         return self::request($url);
     }
@@ -207,7 +206,7 @@ class API
 
     protected static function getSearchUrl(array $params): string
     {
-        return Request::buildURL([Core::getAPIUrl(),'search'], array_merge(
+        return Request::buildURL([Core::getKodikAPIUrl(),'search'], array_merge(
             $params,
             self::getDefaultParams(),
             ['limit'=>100],
@@ -338,8 +337,8 @@ class API
 
     public static function translations(): array
     {
-        $url = Request::buildURL([Core::getAPIUrl(),__FUNCTION__], [
-            'token' => Core::getAPIToken(),
+        $url = Request::buildURL([Core::getKodikAPIUrl(),__FUNCTION__], [
+            'token' => Core::getKodikAPIToken(),
         ]);
         return Request::getResponse($url);
     }

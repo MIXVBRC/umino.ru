@@ -30,15 +30,16 @@ $this->setFrameMode(true);
                     alt="<?=$arItem["DETAIL_PICTURE"]["ALT"]?>"
                     title="<?=$arItem["DETAIL_PICTURE"]["TITLE"]?>"
             />
+            <br>
             <div>
                 <?if($arParams["DISPLAY_NAME"]!="N" && $arItem["NAME"]):?>
                     <?if(!$arParams["HIDE_LINK_WHEN_NO_DETAIL"] || ($arItem["DETAIL_TEXT"] && $arResult["USER_HAVE_ACCESS"])):?>
                         <b><?echo $arItem["NAME"]?></b><br>
                     <?else:?>
-                        <b><?echo $arItem["NAME"]?></b><br />
+                        <b><?echo $arItem["NAME"]?></b><br>
                     <?endif;?>
                 <?endif;?>
-                <?foreach($arItem["FIELDS"] as $code=>$value): break?>
+                <?foreach($arItem["FIELDS"] as $code=>$value): ?>
                     <?=GetMessage("IBLOCK_FIELD_".$code)?>:&nbsp;<?=$value;?> <br>
                 <?endforeach;?>
                 <?foreach($arItem["DISPLAY_PROPERTIES"] as $pid=>$arProperty):?>

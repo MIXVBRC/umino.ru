@@ -11,8 +11,6 @@ class Anime extends Entity
 {
     protected static string $type = 'animes';
 
-    protected static array $cache = [];
-
     public function get(): array
     {
         $response = parent::get();

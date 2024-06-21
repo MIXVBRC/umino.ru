@@ -311,31 +311,12 @@ CJSCore::Init(array("jquery"));
         foreach ($episodes as $episode) {
 
             $translation = $episode['PROPERTIES']['TRANSLATION'];
-            $seasonLink = $episode['PROPERTIES']['LINK'];
-            $season = $episode['PROPERTIES']['SEASON'];
+            $type = $episode['PROPERTIES']['TYPE'];
 
-            if ($seasonType = $episode['PROPERTIES']['SEASON_TYPE']) {
-                if ($season > 0) {
-                    $season = $season > 0 ? $season : '';
-                    $season = $seasonType;
-                } else {
-                    $season .= ' | ' . $seasonType;
-                }
-            }
-
-            $episodeList = [];
-
-            foreach ($episode['PROPERTIES']['EPISODES'] as $episode) {
-                if (empty($episode['VALUE'])) continue;
-                $episodeList[$episode['DESCRIPTION']] = $episode['VALUE'];
-            }
-
-            if ($episodeList) {
-                $translations[$translation]['ANIME'][$season] = $episodeList;
-            } else {
-                $translations[$translation]['ANIME'] = $seasonLink;
-            }
+            $translations[$translation]['ANIME'][$type][] = $episode;
         }
+
+
 
         ?>
 
@@ -343,44 +324,49 @@ CJSCore::Init(array("jquery"));
             <div class="tab" data-tabs>
                 <div class="tab_header" data-tabs-header>
                     <? foreach ($translations as $xmlId => $translation): ?>
-                        <? if (is_array($translation['ANIME'])): ?>
-                            <span style="margin: 5px; cursor: pointer" data-tabs-item="<?= $xmlId ?>"><?= $translation['NAME'] ?></span>
-                        <? else: ?>
-                            <span style="margin: 5px; cursor: pointer" data-link="<?= $translation['ANIME'] ?>"><?= $translation['NAME'] ?></span>
-                        <? endif ?>
+                        <span style="margin: 5px; cursor: pointer" data-tabs-item="<?= $xmlId ?>"><?= $translation['NAME'] ?></span>
                     <? endforeach ?>
                 </div>
                 <div class="tab_body" data-tabs-footer>
 
                     <? foreach ($translations as $xmlId => $translation): ?>
 
-                        <? if (!is_array($translation['ANIME'])) continue; ?>
+                        <div data-tabs-item="<?= $xmlId ?>">
+                            <hr>
+                            <ul>
 
-                            <div data-tabs-item="<?= $xmlId ?>">
-                                <hr>
-                                <ul>
+                            <? foreach ($translation['ANIME'] as $type => $items): ?>
 
-                                    <? foreach ($translation['ANIME'] as $season => $episodes): ?>
+                                <? if ($type == 'anime'): ?>
+                                    <h3>Фильмы</h3>
+                                <? else: ?>
+                                    <h3>Эпизоды</h3>
+                                <? endif ?>
 
-                                        <? if (count($translation['ANIME']) > 1): ?>
+                                <? foreach ($items as $item): ?>
 
-                                            <h5><?= $season ?></h5>
-
-                                        <? endif ?>
-
-                                        <? foreach ($episodes as $num => $link): ?>
-
+                                    <? if ($type == 'anime'): ?>
+                                        <li>
+                                            <span data-link="<?=$item['PROPERTIES']['LINK']?>"
+                                                  title="<?=$item['PROPERTIES']['KODIK_TITLE_ORIG']?>">
+                                                <?=$item['PROPERTIES']['KODIK_TITLE']?>
+                                            </span>
+                                        </li>
+                                    <? else: ?>
+                                        <? foreach ($item['PROPERTIES']['EPISODES'] as $episode): ?>
                                             <li>
-                                                <span data-link="<?=$link?>"><?=$num?></span>
+                                                <span data-link="<?=$episode['VALUE']?>"><?=$episode['DESCRIPTION']?></span>
                                             </li>
+                                        <? endforeach; ?>
+                                    <? endif ?>
 
-                                        <? endforeach ?>
+                                <? endforeach; ?>
 
-                                    <? endforeach; ?>
+                            <? endforeach; ?>
 
-                                </ul>
-                                <hr>
-                            </div>
+                            </ul>
+                            <hr>
+                        </div>
                     <? endforeach; ?>
 
                 </div>

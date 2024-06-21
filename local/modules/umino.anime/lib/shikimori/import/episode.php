@@ -14,12 +14,16 @@ class Episode extends Entity
 
         Manager::addLoad(Translation::getName(), $fields['TRANSLATION']['ID']);
 
-        $fields['NAME'] = implode(' | ', [
+        $fields['NAME'] = [
             $fields['TITLE'],
             $fields['TRANSLATION']['TITLE'],
             $fields['TRANSLATION']['TYPE'],
-            $fields['SEASON'] . ($fields['SEASON_TYPE'] ? ' | '. $fields['SEASON_TYPE'] : ''),
-        ]);
+            $fields['TYPE'],
+        ];
+        if ($fields['SEASON']) {
+            $fields['NAME'][] =$fields['SEASON'] . ($fields['SEASON_TYPE'] ? ' | '. $fields['SEASON_TYPE'] : '');
+        }
+        $fields['NAME'] = implode(' | ', $fields['NAME']);
 
         $fields['ANIME'] = self::getXmlId($fields['SHIKIMORI_ID'], Manager::getIBCode(Anime::getName()));
         $fields['TRANSLATION'] = self::getXmlId($fields['TRANSLATION']['ID'], Manager::getIBCode(Translation::getName()));
@@ -36,6 +40,8 @@ class Episode extends Entity
             'XML_ID' => $fields['XML_ID'],
             'IBLOCK_ID' => $fields['IBLOCK_ID'],
             'PROPERTY_VALUES' => [
+                'KODIK_TITLE' => $fields['TITLE'],
+                'KODIK_TITLE_ORIG' => $fields['TITLE_ORIG'],
                 'TYPE' => $fields['TYPE'],
                 'QUALITY' => $fields['QUALITY'],
                 'LINK' => $fields['LINK'],

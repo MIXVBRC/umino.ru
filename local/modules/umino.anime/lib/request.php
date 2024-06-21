@@ -6,8 +6,6 @@ namespace Umino\Anime;
 
 class Request
 {
-    protected static array $cache = [];
-
     protected static array $options = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_SSL_VERIFYPEER => false,
@@ -55,7 +53,7 @@ class Request
     {
         $cacheKey = md5(serialize([$url,$isJson]));
 
-        $result = static::$cache[$cacheKey];
+        $result = Cache::get($cacheKey);
 
         if (isset($result)) return $result;
 
@@ -69,7 +67,7 @@ class Request
 
         $result = $result[array_key_first($result)];
 
-        return static::$cache[$cacheKey] = $result;
+        return Cache::set($result, $cacheKey);
     }
 
     /**
@@ -85,7 +83,7 @@ class Request
         {
             $cacheKey = md5(serialize([$url,$isJson]));
 
-            $cacheResult = static::$cache[$cacheKey];
+            $cacheResult = Cache::get($cacheKey);
 
             if (!isset($cacheResult)) continue;
 
@@ -106,7 +104,7 @@ class Request
         {
             $cacheKey = md5(serialize([$url,$isJson]));
 
-            $result[$key] = static::$cache[$cacheKey] = $requestResults[$key];
+            $result[$key] = Cache::set($requestResults[$key], $cacheKey);
         }
 
         return $result;

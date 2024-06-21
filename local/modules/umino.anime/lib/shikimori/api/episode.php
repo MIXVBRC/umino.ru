@@ -102,10 +102,6 @@ class Episode extends Video
 
         foreach ($items as $item) {
 
-            $anime = (new Anime($item['shikimori_id']))->get();
-
-            $item['title'] = $anime['russian'] ?: $anime['name'];
-
             if (empty($item['seasons'])) {
                 $id = md5(serialize([trim($item['id'])]));
                 $result[$id] = $item;

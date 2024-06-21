@@ -4,14 +4,13 @@
 namespace Umino\Anime\Shikimori\API;
 
 
+use Umino\Anime\Cache;
 use Umino\Anime\Request;
 
 class AnimeRole extends Video
 {
     protected static string $type = 'animes';
     protected static string $typeChild = 'roles';
-
-    protected static array $cache = [];
 
     public function get(): array
     {
@@ -45,7 +44,7 @@ class AnimeRole extends Video
     {
         $cacheKey = md5(serialize($items));
 
-        $results = static::$cache[$cacheKey];
+        $results = Cache::get($cacheKey);
 
         if ($results) return $results;
 
@@ -74,6 +73,6 @@ class AnimeRole extends Video
             }
         }
 
-        return static::$cache[$cacheKey] = $results;
+        return Cache::set($results, $cacheKey);
     }
 }

@@ -4,6 +4,8 @@
 namespace Umino\Anime\Shikimori\API;
 
 
+use Umino\Anime\Cache;
+use Umino\Anime\Core;
 use Umino\Anime\Request;
 
 
@@ -21,6 +23,11 @@ class Entity
     {
         $this->id = trim($id);
         static::$ids[get_called_class()][] = $this;
+    }
+
+    public static function getUrl(): string
+    {
+        return Cache::get() ?: Cache::set(Core::getShikimoriAPIUrl());
     }
 
     public function getId(): string
